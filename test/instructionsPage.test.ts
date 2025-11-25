@@ -18,7 +18,7 @@ test('it renders a public instruction data struct', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following pub struct.
-    codeContains(getFromRenderMap(renderMap, 'instructions/mint_tokens.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'instructions/mint_tokens.rs').content, [
         `pub struct MintTokensInstructionData`,
         `pub fn new(`,
     ]);
@@ -46,7 +46,7 @@ test('it renders an instruction with a remainder str', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following pub struct.
-    codeContains(getFromRenderMap(renderMap, 'instructions/add_memo.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'instructions/add_memo.rs').content, [
         `use kaigan::types::RemainderStr`,
         `pub memo: RemainderStr`,
     ]);
@@ -64,7 +64,7 @@ test('it renders a default impl for instruction data struct', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following Default trait to be implemented.
-    codeContains(getFromRenderMap(renderMap, 'instructions/mint_tokens.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'instructions/mint_tokens.rs').content, [
         `impl Default for MintTokensInstructionData`,
         `fn default(`,
     ]);

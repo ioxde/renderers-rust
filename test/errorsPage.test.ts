@@ -29,7 +29,7 @@ test('it renders codes for errors', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following errors with codes.
-    codeContains(getFromRenderMap(renderMap, 'errors/spl_token.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'errors/spl_token.rs').content, [
         `InvalidInstruction = 0x1770,`,
         `InvalidProgram = 0x1B58,`,
     ]);

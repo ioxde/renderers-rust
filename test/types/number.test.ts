@@ -17,11 +17,11 @@ test('it exports short u16 numbers', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect a short u16 to be exported.
-    codeContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs').content, [
         /pub type MyShortU16 = ShortU16/,
         /use solana_short_vec::ShortU16/,
     ]);
-    codeDoesNotContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs'), [
+    codeDoesNotContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs').content, [
         /use borsh::BorshSerialize/,
         /use borsh::BorshDeserialize/,
     ]);
@@ -38,7 +38,7 @@ test('it exports short u16 numbers as struct fields', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect a short u16 to be exported as a struct field.
-    codeContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'types/my_short_u16.rs').content, [
         /pub value: ShortU16/,
         /use solana_short_vec::ShortU16/,
     ]);

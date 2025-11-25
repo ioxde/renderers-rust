@@ -25,12 +25,12 @@ test('it exports short vecs', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect a short vec to be exported.
-    codeContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs').content, [
         /pub type MyShortVec = ShortVec<Pubkey>;/,
         /use solana_pubkey::Pubkey/,
         /use solana_short_vec::ShortVec/,
     ]);
-    codeDoesNotContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs'), [
+    codeDoesNotContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs').content, [
         /use borsh::BorshSerialize/,
         /use borsh::BorshDeserialize/,
     ]);
@@ -52,7 +52,7 @@ test('it exports short vecs as struct fields', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect a short vec to be exported as a struct field.
-    codeContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'types/my_short_vec.rs').content, [
         /pub value: ShortVec<Pubkey>,/,
         /use solana_pubkey::Pubkey/,
         /use solana_short_vec::ShortVec/,

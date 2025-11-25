@@ -113,9 +113,8 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         imports.mergeWith(seedsImports);
                     }
 
-                    return createRenderMap(
-                        `accounts/${snakeCase(node.name)}.rs`,
-                        render('accountsPage.njk', {
+                    return createRenderMap(`accounts/${snakeCase(node.name)}.rs`, {
+                        content: render('accountsPage.njk', {
                             account: node,
                             anchorTraits,
                             constantSeeds,
@@ -130,21 +129,20 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             seeds,
                             typeManifest,
                         }),
-                    );
+                    });
                 },
 
                 visitDefinedType(node) {
                     const typeManifest = visit(node, typeManifestVisitor);
                     const imports = new ImportMap().mergeWithManifest(typeManifest);
 
-                    return createRenderMap(
-                        `types/${snakeCase(node.name)}.rs`,
-                        render('definedTypesPage.njk', {
+                    return createRenderMap(`types/${snakeCase(node.name)}.rs`, {
+                        content: render('definedTypesPage.njk', {
                             definedType: node,
                             imports: imports.remove(`generatedTypes::${pascalCase(node.name)}`).toString(dependencyMap),
                             typeManifest,
                         }),
-                    );
+                    });
                 },
 
                 visitInstruction(node) {
@@ -235,9 +233,8 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     const dataTraits = getTraitsFromNode(node);
                     imports.mergeWith(dataTraits.imports);
 
-                    return createRenderMap(
-                        `instructions/${snakeCase(node.name)}.rs`,
-                        render('instructionsPage.njk', {
+                    return createRenderMap(`instructions/${snakeCase(node.name)}.rs`, {
+                        content: render('instructionsPage.njk', {
                             dataTraits: dataTraits.render,
                             discriminatorConstants: discriminatorConstants.render,
                             hasArgs,
@@ -251,7 +248,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             program,
                             typeManifest,
                         }),
-                    );
+                    });
                 },
 
                 visitProgram(node, { self }) {
@@ -266,15 +263,13 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
 
                     // Errors.
                     if (node.errors.length > 0) {
-                        renders = addToRenderMap(
-                            renders,
-                            `errors/${snakeCase(node.name)}.rs`,
-                            render('errorsPage.njk', {
+                        renders = addToRenderMap(renders, `errors/${snakeCase(node.name)}.rs`, {
+                            content: render('errorsPage.njk', {
                                 errors: node.errors,
                                 imports: new ImportMap().toString(dependencyMap),
                                 program: node,
                             }),
-                        );
+                        });
                     }
 
                     program = null;
@@ -306,15 +301,22 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     return mergeRenderMaps([
                         createRenderMap({
                             ['accounts/mod.rs']:
-                                accountsToExport.length > 0 ? render('accountsMod.njk', ctx) : undefined,
-                            ['errors/mod.rs']: programsToExport.length > 0 ? render('errorsMod.njk', ctx) : undefined,
+                                accountsToExport.length > 0 ? { content: render('accountsMod.njk', ctx) } : undefined,
+                            ['errors/mod.rs']:
+                                programsToExport.length > 0 ? { content: render('errorsMod.njk', ctx) } : undefined,
                             ['instructions/mod.rs']:
-                                instructionsToExport.length > 0 ? render('instructionsMod.njk', ctx) : undefined,
-                            ['mod.rs']: render('rootMod.njk', ctx),
-                            ['programs.rs']: programsToExport.length > 0 ? render('programsMod.njk', ctx) : undefined,
-                            ['shared.rs']: accountsToExport.length > 0 ? render('sharedPage.njk', ctx) : undefined,
+                                instructionsToExport.length > 0
+                                    ? { content: render('instructionsMod.njk', ctx) }
+                                    : undefined,
+                            ['mod.rs']: { content: render('rootMod.njk', ctx) },
+                            ['programs.rs']:
+                                programsToExport.length > 0 ? { content: render('programsMod.njk', ctx) } : undefined,
+                            ['shared.rs']:
+                                accountsToExport.length > 0 ? { content: render('sharedPage.njk', ctx) } : undefined,
                             ['types/mod.rs']:
-                                definedTypesToExport.length > 0 ? render('definedTypesMod.njk', ctx) : undefined,
+                                definedTypesToExport.length > 0
+                                    ? { content: render('definedTypesMod.njk', ctx) }
+                                    : undefined,
                         }),
                         ...getAllPrograms(node).map(p => visit(p, self)),
                     ]);

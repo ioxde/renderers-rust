@@ -19,6 +19,7 @@ import {
     structFieldTypeNode,
     structTypeNode,
 } from '@codama/nodes';
+import { getFromRenderMap } from '@codama/renderers-core';
 import { visit } from '@codama/visitors-core';
 import { describe, expect, test } from 'vitest';
 
@@ -384,7 +385,7 @@ describe('conditional try_to_vec generation', () => {
         );
 
         // Then we expect the try_to_vec method to be included with borsh::to_vec implementation.
-        const instruction = renderMap.get('instructions/transfer.rs') as string;
+        const instruction = getFromRenderMap(renderMap, 'instructions/transfer.rs').content;
         expect(instruction).toContain('pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error>');
         expect(instruction).toContain('borsh::to_vec(self)');
 
@@ -407,7 +408,7 @@ describe('conditional try_to_vec generation', () => {
         );
 
         // Then we expect no try_to_vec method and no borsh::to_vec calls.
-        const instruction = renderMap.get('instructions/transfer.rs') as string;
+        const instruction = getFromRenderMap(renderMap, 'instructions/transfer.rs').content;
         expect(instruction).not.toContain('pub(crate) fn try_to_vec(&self)');
         expect(instruction).not.toContain('borsh::to_vec');
 
@@ -432,7 +433,7 @@ describe('conditional try_to_vec generation', () => {
         );
 
         // Then we expect try_to_vec to be included for both InstructionData and InstructionArgs.
-        const instruction = renderMap.get('instructions/transfer.rs') as string;
+        const instruction = getFromRenderMap(renderMap, 'instructions/transfer.rs').content;
         expect(instruction).toMatch(/impl TransferInstructionData \{[\s\S]*?pub\(crate\) fn try_to_vec/);
         expect(instruction).toMatch(/impl TransferInstructionArgs \{[\s\S]*?pub\(crate\) fn try_to_vec/);
 
@@ -456,7 +457,7 @@ describe('conditional try_to_vec generation', () => {
         );
 
         // Then we expect try_to_vec to be generated even with fully qualified trait name.
-        const instruction = renderMap.get('instructions/transfer.rs') as string;
+        const instruction = getFromRenderMap(renderMap, 'instructions/transfer.rs').content;
         expect(instruction).toContain('pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error>');
         expect(instruction).toContain('borsh::to_vec(self)');
         expect(instruction).toContain('#[derive(borsh::BorshSerialize');
@@ -480,7 +481,7 @@ describe('conditional try_to_vec generation', () => {
         );
 
         // Then we expect the try_to_vec method to be omitted and no borsh::to_vec calls.
-        const instruction = renderMap.get('instructions/transfer.rs') as string;
+        const instruction = getFromRenderMap(renderMap, 'instructions/transfer.rs').content;
         expect(instruction).not.toContain('pub(crate) fn try_to_vec(&self)');
         expect(instruction).not.toContain('borsh::to_vec');
         expect(instruction).toContain('#[derive(Clone, Debug)]');
@@ -508,7 +509,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect field attributes to be wrapped in cfg_attr.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain(
             '#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]',
         );
@@ -551,7 +552,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect field attributes without cfg_attr.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain('#[serde(with = "serde_with::As::<serde_with::DisplayFromStr>")]');
         expect(account).toContain('#[serde(with = "serde_with::As::<Vec<serde_with::DisplayFromStr>>")]');
         expect(account).not.toContain('#[cfg_attr(feature = "serde"');
@@ -582,7 +583,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect no serde field attributes at all.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).not.toContain('serde(with');
         expect(account).not.toContain('serde_with::As');
         expect(account).not.toContain('DisplayFromStr');
@@ -607,7 +608,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect the big array attribute to be feature-flagged.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain('#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]');
     });
 
@@ -635,7 +636,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect the bytes attribute without cfg_attr.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain('#[serde(with = "serde_with::As::<serde_with::Bytes>")]');
         expect(account).not.toContain('#[cfg_attr(feature = "serde"');
     });
@@ -661,7 +662,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect field attributes with the custom feature name.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain(
             '#[cfg_attr(feature = "json_support", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]',
         );
@@ -690,7 +691,7 @@ describe('conditional serde field attributes', () => {
         );
 
         // Then we expect field attributes without cfg_attr since override has serde but no feature flag.
-        const account = renderMap.get('accounts/my_account.rs') as string;
+        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
         expect(account).toContain('#[serde(with = "serde_with::As::<serde_with::DisplayFromStr>")]');
         expect(account).not.toContain('#[cfg_attr(feature = "serde"');
     });

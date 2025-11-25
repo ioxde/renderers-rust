@@ -45,7 +45,7 @@ test('it renders a byte array seed used on an account', () => {
 
     // Then we expect the following identifier and reference to the byte array
     // as a parameters to be rendered.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         `byte_array_seed: [u8; 32],`,
         `&byte_array_seed,`,
     ]);
@@ -74,7 +74,7 @@ test('it renders an empty array of seeds for seedless PDAs', () => {
 
     // Then we expect the following identifier and reference to the byte array
     // as a parameters to be rendered.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [/pub fn find_pda\(/, /&\[\s*\]/]);
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [/pub fn find_pda\(/, /&\[\s*\]/]);
 });
 
 test('it renders constant PDA seeds as prefix consts', () => {
@@ -99,7 +99,7 @@ test('it renders constant PDA seeds as prefix consts', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following const helpers for constant seeds.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         '///   0. `TestAccount::PREFIX.0`',
         '///   1. my_account (`Pubkey`)',
         '///   2. `TestAccount::PREFIX.1`',
@@ -131,7 +131,7 @@ test('it renders anchor traits impl', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following Anchor traits impl.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         '#[cfg(feature = "anchor")]',
         'impl anchor_lang::AccountDeserialize for TestAccount',
         'impl anchor_lang::AccountSerialize for TestAccount {}',
@@ -163,7 +163,7 @@ test('it renders fetch functions', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then we expect the following fetch functions to be rendered.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         'pub fn fetch_test_account',
         'pub fn fetch_maybe_test_account',
         'pub fn fetch_all_test_account',
@@ -195,7 +195,7 @@ test('it renders account without anchor traits', () => {
     const renderMap = visit(node, getRenderMapVisitor({ anchorTraits: false }));
 
     // Then we do not expect Anchor traits.
-    codeDoesNotContains(getFromRenderMap(renderMap, 'accounts/test_account.rs'), [
+    codeDoesNotContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         '#[cfg(feature = "anchor")]',
         '#[cfg(feature = "anchor-idl-build")]',
     ]);
