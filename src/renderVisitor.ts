@@ -1,5 +1,5 @@
 import { logError, logWarn } from '@codama/errors';
-import { deleteDirectory, writeRenderMap } from '@codama/renderers-core';
+import { deleteDirectory, joinPath, writeRenderMap } from '@codama/renderers-core';
 import { rootNodeVisitor, visit } from '@codama/visitors-core';
 import { spawnSync } from 'child_process';
 
@@ -7,40 +7,36 @@ import { GetRenderMapOptions, getRenderMapVisitor } from './getRenderMapVisitor'
 import { syncCargoToml } from './utils';
 
 export type RenderOptions = GetRenderMapOptions & {
-    crateFolder?: string;
     deleteFolderBeforeRendering?: boolean;
     formatCode?: boolean;
+    generatedFolder?: string;
     syncCargoToml?: boolean;
     toolchain?: string;
 };
 
-export function renderVisitor(path: string, options: RenderOptions = {}) {
+export function renderVisitor(crateFolder: string, options: RenderOptions = {}) {
     return rootNodeVisitor(root => {
+        const generatedFolder = joinPath(crateFolder, options.generatedFolder ?? 'src/generated');
+
         // Delete existing generated folder.
         if (options.deleteFolderBeforeRendering ?? true) {
-            deleteDirectory(path);
+            deleteDirectory(generatedFolder);
         }
 
         // Render the new files.
         const renderMap = visit(root, getRenderMapVisitor(options));
-        writeRenderMap(renderMap, path);
+        writeRenderMap(renderMap, generatedFolder);
 
         // Sync Cargo.toml dependencies and versions, if requested.
-        syncCargoToml(renderMap, options);
+        syncCargoToml(renderMap, crateFolder, options);
 
         // format the code
         if (options.formatCode) {
-            if (options.crateFolder) {
-                const removeFalsy = <T>(arg: T | false | null | undefined): arg is T => Boolean(arg);
-                runFormatter(
-                    'cargo',
-                    [options.toolchain, 'fmt', '--manifest-path', `${options.crateFolder}/Cargo.toml`].filter(
-                        removeFalsy,
-                    ),
-                );
-            } else {
-                logWarn('No crate folder specified, skipping formatting.');
-            }
+            const removeFalsy = <T>(arg: T | false | null | undefined): arg is T => Boolean(arg);
+            runFormatter(
+                'cargo',
+                [options.toolchain, 'fmt', '--manifest-path', `${crateFolder}/Cargo.toml`].filter(removeFalsy),
+            );
         }
     });
 }

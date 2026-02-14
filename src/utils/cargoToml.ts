@@ -62,20 +62,10 @@ export const DEFAULT_DEPENDENCY_VERSIONS: CargoDependencies = {
 
 export function syncCargoToml(
     renderMap: RenderMap<Fragment>,
-    options: Pick<RenderOptions, 'crateFolder' | 'dependencyMap' | 'dependencyVersions' | 'syncCargoToml'>,
+    crateFolder: string,
+    options: Pick<RenderOptions, 'dependencyMap' | 'dependencyVersions' | 'syncCargoToml'>,
 ): void {
     const shouldSyncCargoToml = options.syncCargoToml ?? false;
-    const crateFolder = options.crateFolder;
-
-    // Without a `crateFolder`, we cannot sync the Cargo.toml.
-    if (!crateFolder) {
-        // If we should sync but have no folder, warn the user.
-        if (shouldSyncCargoToml) {
-            logWarn("Cannot sync Cargo.toml. Please provide the 'crateFolder' option.");
-        }
-        return;
-    }
-
     const cargoTomlPath = joinPath(crateFolder, 'Cargo.toml');
     const usedDependencies = getUsedDependencyVersions(
         renderMap,

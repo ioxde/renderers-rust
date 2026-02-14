@@ -24,8 +24,7 @@ async function generateProject(project) {
 
     visit(
         node,
-        renderVisitor(path.join(__dirname, project, 'src', 'generated'), {
-            crateFolder: path.join(__dirname, project),
+        renderVisitor(path.join(__dirname, project), {
             formatCode: true,
         }),
     );
