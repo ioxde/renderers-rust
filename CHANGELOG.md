@@ -1,5 +1,11 @@
 # @codama/renderers-rust
 
+## 2.0.1
+
+### Patch Changes
+
+- [#88](https://github.com/codama-idl/renderers-rust/pull/88) [`6477636`](https://github.com/codama-idl/renderers-rust/commit/6477636b912a2c263216d9cdeae78b5d06b583f4) Thanks [@yihau](https://github.com/yihau)! - resolve io_other_error and uninlined_format_args warnings
+
 ## 2.0.0
 
 ### Major Changes
