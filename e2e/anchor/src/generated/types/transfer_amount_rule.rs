@@ -11,7 +11,6 @@ use borsh::BorshSerialize;
 /// Enforces rules on the amount of tokens being transferred.
 /// The rules can be above, below, equal to, or within a range.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TransferAmountRule {
     Above(u64),
     Below(u64),

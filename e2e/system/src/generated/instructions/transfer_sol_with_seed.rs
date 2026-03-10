@@ -61,7 +61,6 @@ impl TransferSolWithSeed {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TransferSolWithSeedInstructionData {
     discriminator: u32,
 }
@@ -83,7 +82,6 @@ impl Default for TransferSolWithSeedInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TransferSolWithSeedInstructionArgs {
     pub amount: u64,
     pub from_seed: String,

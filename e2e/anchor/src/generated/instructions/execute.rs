@@ -80,7 +80,6 @@ impl Execute {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ExecuteInstructionData {
     discriminator: [u8; 8],
 }
@@ -104,7 +103,6 @@ impl Default for ExecuteInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ExecuteInstructionArgs {
     pub amount: u64,
 }

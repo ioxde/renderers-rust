@@ -12,7 +12,6 @@ use borsh::BorshSerialize;
 /// * Includes - The field must include one of the values in the vector.
 /// * Excludes - The field must not include any of the values in the vector.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MetadataAdditionalFieldRestriction {
     Includes(Vec<String>),
     Excludes(Vec<String>),

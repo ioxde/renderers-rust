@@ -75,7 +75,6 @@ impl WithdrawNonceAccount {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WithdrawNonceAccountInstructionData {
     discriminator: u32,
 }
@@ -97,7 +96,6 @@ impl Default for WithdrawNonceAccountInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WithdrawNonceAccountInstructionArgs {
     pub withdraw_amount: u64,
 }

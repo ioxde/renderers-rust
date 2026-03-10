@@ -13,14 +13,9 @@ use borsh::BorshSerialize;
 use solana_address::Address;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct GuardV1 {
     pub discriminator: [u8; 8],
     /// Mint token representing the guard, do not confuse with the mint of the token being transferred.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub mint: Address,
     /// Bump seed for the guard account.
     pub bump: u8,

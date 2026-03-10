@@ -85,10 +85,10 @@ export function getTypeManifestVisitor(options: {
                     }
 
                     if (isNode(arrayType.count, 'remainderCountNode')) {
-                        childManifest.imports.add('kaigan::types::RemainderVec');
+                        childManifest.imports.add('spl_collections::TrailingVec');
                         return {
                             ...childManifest,
-                            type: `RemainderVec<${childManifest.type}>`,
+                            type: `TrailingVec<${childManifest.type}>`,
                         };
                     }
 
@@ -104,10 +104,10 @@ export function getTypeManifestVisitor(options: {
                             case 'u16':
                             case 'u64': {
                                 const prefixFormat = prefix.format.toUpperCase();
-                                childManifest.imports.add(`kaigan::types::${prefixFormat}PrefixVec`);
+                                childManifest.imports.add(`spl_collections::${prefixFormat}PrefixedVec`);
                                 return {
                                     ...childManifest,
-                                    type: `${prefixFormat}PrefixVec<${childManifest.type}>`,
+                                    type: `${prefixFormat}PrefixedVec<${childManifest.type}>`,
                                 };
                             }
                             case 'shortU16': {
@@ -341,9 +341,9 @@ export function getTypeManifestVisitor(options: {
                 visitStringType() {
                     if (!parentSize) {
                         return {
-                            imports: new ImportMap().add(`kaigan::types::RemainderStr`),
+                            imports: new ImportMap().add(`spl_collections::TrailingStr`),
                             nestedStructs: [],
-                            type: `RemainderStr`,
+                            type: `TrailingStr`,
                         };
                     }
 
@@ -368,9 +368,9 @@ export function getTypeManifestVisitor(options: {
                             case 'u64': {
                                 const prefix = parentSize.format.toUpperCase();
                                 return {
-                                    imports: new ImportMap().add(`kaigan::types::${prefix}PrefixString`),
+                                    imports: new ImportMap().add(`spl_collections::${prefix}PrefixedStr`),
                                     nestedStructs: [],
-                                    type: `${prefix}PrefixString`,
+                                    type: `${prefix}PrefixedStr`,
                                 };
                             }
                             default:

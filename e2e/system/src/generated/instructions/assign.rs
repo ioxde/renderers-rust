@@ -44,7 +44,6 @@ impl Assign {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssignInstructionData {
     discriminator: u32,
 }
@@ -66,7 +65,6 @@ impl Default for AssignInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssignInstructionArgs {
     pub program_address: Address,
 }

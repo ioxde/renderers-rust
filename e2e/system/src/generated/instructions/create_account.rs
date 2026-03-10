@@ -50,7 +50,6 @@ impl CreateAccount {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateAccountInstructionData {
     discriminator: u32,
 }
@@ -72,7 +71,6 @@ impl Default for CreateAccountInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateAccountInstructionArgs {
     pub lamports: u64,
     pub space: u64,

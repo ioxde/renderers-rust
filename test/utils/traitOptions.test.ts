@@ -7,7 +7,6 @@ import {
     enumEmptyVariantTypeNode,
     enumStructVariantTypeNode,
     enumTypeNode,
-    fixedCountNode,
     fixedSizeTypeNode,
     instructionArgumentNode,
     instructionNode,
@@ -44,10 +43,7 @@ describe('default values', () => {
         const { render, imports } = getTraitsFromNode(node);
 
         // Then we expect the following traits to be rendered.
-        expect(render).toBe(
-            `#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]\n` +
-                `#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]\n`,
-        );
+        expect(render).toBe(`#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]\n`);
 
         // And the following imports to be used.
         expect([...imports.imports]).toStrictEqual(['borsh::BorshSerialize', 'borsh::BorshDeserialize']);
@@ -65,8 +61,7 @@ describe('default values', () => {
 
         // Then we expect the following traits to be rendered.
         expect(render).toBe(
-            `#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Copy, PartialOrd, Hash, FromPrimitive)]\n` +
-                `#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]\n`,
+            `#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq, Copy, PartialOrd, Hash, FromPrimitive)]\n`,
         );
 
         // And the following imports to be used.
@@ -91,10 +86,7 @@ describe('default values', () => {
         const { render, imports } = getTraitsFromNode(node);
 
         // Then we expect the following traits to be rendered.
-        expect(render).toBe(
-            `#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]\n` +
-                `#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]\n`,
-        );
+        expect(render).toBe(`#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]\n`);
 
         // And the following imports to be used.
         expect([...imports.imports]).toStrictEqual(['borsh::BorshSerialize', 'borsh::BorshDeserialize']);
@@ -140,7 +132,7 @@ describe('default values', () => {
         });
 
         // Then we expect the following traits to be rendered.
-        expect(render).toBe(`#[derive(My, Traits)]\n#[cfg_attr(feature = "serde", derive(serde::Serialize))]\n`);
+        expect(render).toBe(`#[derive(My, Traits, Serialize)]\n`);
     });
 });
 
@@ -489,35 +481,6 @@ describe('conditional try_to_vec generation', () => {
 });
 
 describe('conditional serde field attributes', () => {
-    test('it generates cfg_attr serde field attributes when serde is feature-flagged (default)', () => {
-        // Given an account with a Pubkey field.
-        const node = accountNode({
-            data: structTypeNode([
-                structFieldTypeNode({ name: 'authority', type: publicKeyTypeNode() }),
-                structFieldTypeNode({
-                    name: 'tokens',
-                    type: arrayTypeNode(publicKeyTypeNode(), prefixedCountNode(numberTypeNode('u32'))),
-                }),
-            ]),
-            name: 'myAccount',
-        });
-
-        // When we render with default traits (serde is feature-flagged).
-        const renderMap = visit(
-            rootNode(programNode({ accounts: [node], name: 'myProgram', publicKey: '1111' })),
-            getRenderMapVisitor(),
-        );
-
-        // Then we expect field attributes to be wrapped in cfg_attr.
-        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
-        expect(account).toContain(
-            '#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]',
-        );
-        expect(account).toContain(
-            '#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<Vec<serde_with::DisplayFromStr>>"))]',
-        );
-    });
-
     test('it generates plain serde field attributes when serde is not feature-flagged', () => {
         // Given an account with a Pubkey field.
         const node = accountNode({
@@ -587,29 +550,6 @@ describe('conditional serde field attributes', () => {
         expect(account).not.toContain('serde(with');
         expect(account).not.toContain('serde_with::As');
         expect(account).not.toContain('DisplayFromStr');
-    });
-
-    test('it handles large array serde attributes conditionally', () => {
-        // Given an account with a large fixed array field.
-        const node = accountNode({
-            data: structTypeNode([
-                structFieldTypeNode({
-                    name: 'data',
-                    type: fixedSizeTypeNode(arrayTypeNode(numberTypeNode('u8'), fixedCountNode(64)), 64),
-                }),
-            ]),
-            name: 'myAccount',
-        });
-
-        // When we render with default traits (serde is feature-flagged).
-        const renderMap = visit(
-            rootNode(programNode({ accounts: [node], name: 'myProgram', publicKey: '1111' })),
-            getRenderMapVisitor(),
-        );
-
-        // Then we expect the big array attribute to be feature-flagged.
-        const account = getFromRenderMap(renderMap, 'accounts/my_account.rs').content;
-        expect(account).toContain('#[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]');
     });
 
     test('it handles bytes serde attributes conditionally', () => {

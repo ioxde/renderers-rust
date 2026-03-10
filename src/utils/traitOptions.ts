@@ -38,18 +38,9 @@ export type TraitOptions = {
 };
 
 export const DEFAULT_TRAIT_OPTIONS: Required<TraitOptions> = {
-    baseDefaults: [
-        'borsh::BorshSerialize',
-        'borsh::BorshDeserialize',
-        'serde::Serialize',
-        'serde::Deserialize',
-        'Clone',
-        'Debug',
-        'Eq',
-        'PartialEq',
-    ],
+    baseDefaults: ['borsh::BorshSerialize', 'borsh::BorshDeserialize', 'Clone', 'Debug', 'Eq', 'PartialEq'],
     dataEnumDefaults: [],
-    featureFlags: { serde: ['serde::Serialize', 'serde::Deserialize'] },
+    featureFlags: {},
     overrides: {},
     scalarEnumDefaults: ['Copy', 'PartialOrd', 'Hash', 'num_derive::FromPrimitive'],
     structDefaults: [],

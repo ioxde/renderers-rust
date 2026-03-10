@@ -12,19 +12,10 @@ use borsh::BorshSerialize;
 use solana_address::Address;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Nonce {
     pub version: NonceVersion,
     pub state: NonceState,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub authority: Address,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub blockhash: Address,
     pub lamports_per_signature: u64,
 }

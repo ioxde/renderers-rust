@@ -64,7 +64,6 @@ impl InitializeNonceAccount {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitializeNonceAccountInstructionData {
     discriminator: u32,
 }
@@ -86,7 +85,6 @@ impl Default for InitializeNonceAccountInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InitializeNonceAccountInstructionArgs {
     pub nonce_authority: Address,
 }

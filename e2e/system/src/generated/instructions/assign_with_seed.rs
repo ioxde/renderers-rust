@@ -53,7 +53,6 @@ impl AssignWithSeed {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssignWithSeedInstructionData {
     discriminator: u32,
 }
@@ -75,7 +74,6 @@ impl Default for AssignWithSeedInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssignWithSeedInstructionArgs {
     pub base: Address,
     pub seed: String,

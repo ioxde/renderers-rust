@@ -61,7 +61,6 @@ impl CreateAccountWithSeed {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateAccountWithSeedInstructionData {
     discriminator: u32,
 }
@@ -83,7 +82,6 @@ impl Default for CreateAccountWithSeedInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateAccountWithSeedInstructionArgs {
     pub base: Address,
     pub seed: String,
