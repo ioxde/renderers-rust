@@ -41,13 +41,9 @@ type CargoDependencyObject = {
 
 export const DEFAULT_DEPENDENCY_VERSIONS: CargoDependencies = {
     'anchor-lang': { optional: true, version: '~0.31' },
-    borsh: '^0.10',
-    kaigan: { features: ['serde'], version: '^0.3' },
+    borsh: '^1.0',
     'num-derive': '^0.4',
     'num-traits': '^0.2',
-    serde: { features: ['derive'], optional: true, version: '^1.0' },
-    'serde-big-array': '^0.5',
-    serde_with: { optional: true, version: '^3.0' },
     'solana-account': '~2.2',
     'solana-account-info': '~2.3',
     'solana-client': { optional: true, version: '^2.2' },
@@ -57,6 +53,7 @@ export const DEFAULT_DEPENDENCY_VERSIONS: CargoDependencies = {
     'solana-program-error': '~2.2',
     'solana-pubkey': { features: ['curve25519', 'borsh'], version: '~2.3' },
     'solana-sdk': { optional: true, version: '^2.3' },
+    'spl-collections': { features: ['borsh'], version: '^0.1' },
     thiserror: '^1.0',
 };
 
@@ -108,8 +105,7 @@ export function createNewCargoToml(usedDependencies: CargoDependencies): CargoTo
             features: {
                 anchor: ['dep:anchor-lang'],
                 'anchor-idl-build': ['anchor', 'anchor-lang?/idl-build'],
-                fetch: ['dep:solana-client', 'dep:solana-sdk'],
-                serde: ['dep:serde', 'dep:serde_with'],
+                fetch: ['dep:solana-client'],
             },
             // eslint-disable-next-line sort-keys-fix/sort-keys-fix
             dependencies: {},

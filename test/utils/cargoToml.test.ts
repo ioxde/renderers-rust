@@ -106,8 +106,7 @@ describe('createNewCargoToml', () => {
         expect(cargoToml.features).toEqual({
             anchor: ['dep:anchor-lang'],
             'anchor-idl-build': ['anchor', 'anchor-lang?/idl-build'],
-            fetch: ['dep:solana-client', 'dep:solana-sdk'],
-            serde: ['dep:serde', 'dep:serde_with'],
+            fetch: ['dep:solana-client'],
         });
     });
 });

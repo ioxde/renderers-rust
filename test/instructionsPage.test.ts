@@ -47,8 +47,8 @@ test('it renders an instruction with a remainder str', () => {
 
     // Then we expect the following pub struct.
     codeContains(getFromRenderMap(renderMap, 'instructions/add_memo.rs').content, [
-        `use kaigan::types::RemainderStr`,
-        `pub memo: RemainderStr`,
+        `use spl_collections::TrailingStr`,
+        `pub memo: TrailingStr`,
     ]);
 });
 

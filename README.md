@@ -67,16 +67,7 @@ Note that you must provide the fully qualified name of the traits you provide (e
 
 ```ts
 const traitOptions = {
-    baseDefaults: [
-        'borsh::BorshSerialize',
-        'borsh::BorshDeserialize',
-        'serde::Serialize',
-        'serde::Deserialize',
-        'Clone',
-        'Debug',
-        'Eq',
-        'PartialEq',
-    ],
+    baseDefaults: ['borsh::BorshSerialize', 'borsh::BorshDeserialize', 'Clone', 'Debug', 'Eq', 'PartialEq'],
     dataEnumDefaults: [],
     scalarEnumDefaults: ['Copy', 'PartialOrd', 'Hash', 'num_derive::FromPrimitive'],
     structDefaults: [],
@@ -114,7 +105,15 @@ Now, if at any point, we encounter a `fruits::Apple` or `fruits::Banana` trait t
 #[cfg_attr(feature = "fruits", derive(fruits::Apple, fruits::Banana))]
 ```
 
-By default, the `featureFlags` option is set to the following:
+By default, the `featureFlags` option is empty:
+
+```ts
+const traitOptions = {
+    featureFlags: {},
+};
+```
+
+If you want to make `serde` derives optional behind a `serde` feature, you may configure it like this:
 
 ```ts
 const traitOptions = {

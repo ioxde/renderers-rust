@@ -12,7 +12,6 @@ use borsh::BorshSerialize;
 /// Enforces rules on a single additional field in the mint metadata.
 /// The field must exist and the value must pass the restriction.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MetadataAdditionalFieldRule {
     pub field: String,
     pub value_restrictions: Option<MetadataAdditionalFieldRestriction>,

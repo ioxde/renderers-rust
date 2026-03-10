@@ -75,7 +75,6 @@ impl UpdateGuard {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateGuardInstructionData {
     discriminator: [u8; 8],
 }
@@ -99,7 +98,6 @@ impl Default for UpdateGuardInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateGuardInstructionArgs {
     pub cpi_rule: Option<CpiRule>,
     pub transfer_amount_rule: Option<TransferAmountRule>,

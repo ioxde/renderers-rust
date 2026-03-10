@@ -7,7 +7,7 @@
 
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
-use kaigan::types::RemainderStr;
+use spl_collections::TrailingStr;
 
 /// Accounts.
 #[derive(Debug)]
@@ -39,7 +39,6 @@ impl AddMemo {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AddMemoInstructionData {}
 
 impl AddMemoInstructionData {
@@ -59,9 +58,8 @@ impl Default for AddMemoInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AddMemoInstructionArgs {
-    pub memo: RemainderStr,
+    pub memo: TrailingStr,
 }
 
 impl AddMemoInstructionArgs {
@@ -76,7 +74,7 @@ impl AddMemoInstructionArgs {
 ///
 #[derive(Clone, Debug, Default)]
 pub struct AddMemoBuilder {
-    memo: Option<RemainderStr>,
+    memo: Option<TrailingStr>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -85,7 +83,7 @@ impl AddMemoBuilder {
         Self::default()
     }
     #[inline(always)]
-    pub fn memo(&mut self, memo: RemainderStr) -> &mut Self {
+    pub fn memo(&mut self, memo: TrailingStr) -> &mut Self {
         self.memo = Some(memo);
         self
     }
@@ -206,7 +204,7 @@ impl<'a, 'b> AddMemoCpiBuilder<'a, 'b> {
         Self { instruction }
     }
     #[inline(always)]
-    pub fn memo(&mut self, memo: RemainderStr) -> &mut Self {
+    pub fn memo(&mut self, memo: TrailingStr) -> &mut Self {
         self.instruction.memo = Some(memo);
         self
     }
@@ -261,7 +259,7 @@ impl<'a, 'b> AddMemoCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct AddMemoCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    memo: Option<RemainderStr>,
+    memo: Option<TrailingStr>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

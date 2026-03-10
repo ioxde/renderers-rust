@@ -40,8 +40,8 @@ test('it renders a prefix string on a defined type', () => {
 
     // Then we expect the following use and identifier to be rendered.
     codeContains(getFromRenderMap(renderMap, 'types/blob.rs').content, [
-        `use kaigan::types::U8PrefixString;`,
-        `content_type: U8PrefixString,`,
+        `use spl_collections::U8PrefixedStr;`,
+        `content_type: U8PrefixedStr,`,
     ]);
 });
 

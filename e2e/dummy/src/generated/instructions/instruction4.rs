@@ -41,7 +41,6 @@ impl Instruction4 {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Instruction4InstructionData {}
 
 impl Instruction4InstructionData {
@@ -61,7 +60,6 @@ impl Default for Instruction4InstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Instruction4InstructionArgs {
     pub my_argument: u64,
 }

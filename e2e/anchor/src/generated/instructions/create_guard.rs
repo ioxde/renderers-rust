@@ -82,7 +82,6 @@ impl CreateGuard {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateGuardInstructionData {
     discriminator: [u8; 8],
 }
@@ -106,7 +105,6 @@ impl Default for CreateGuardInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateGuardInstructionArgs {
     pub name: String,
     pub symbol: String,
