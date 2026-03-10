@@ -1,5 +1,40 @@
 # @codama/renderers-rust
 
+## 3.0.0
+
+### Major Changes
+
+- [#92](https://github.com/codama-idl/renderers-rust/pull/92) [`4af6c06`](https://github.com/codama-idl/renderers-rust/commit/4af6c064a279e3d09feae4348a358286314f5a30) Thanks [@grod220](https://github.com/grod220)! - Removed default `serde` support and replaced `kaigan` with `spl-collections`
+
+    **BREAKING CHANGES:**
+    - Generated variable-sized string/vector wrappers now come from `spl-collections` instead of `kaigan`. If you have handwritten code that references these generated wrapper types, update those imports and usages after regenerating your client:
+        - `kaigan::types::RemainderStr` -> `spl_collections::TrailingStr`
+        - `kaigan::types::RemainderVec<T>` -> `spl_collections::TrailingVec<T>`
+        - `kaigan::types::U8PrefixString`, `U16PrefixString`, `U64PrefixString` -> `spl_collections::U8PrefixedStr`, `U16PrefixedStr`, `U64PrefixedStr`
+        - `kaigan::types::U8PrefixVec<T>`, `U16PrefixVec<T>`, `U64PrefixVec<T>` -> `spl_collections::U8PrefixedVec<T>`, `U16PrefixedVec<T>`, `U64PrefixedVec<T>`
+    - `serde` is no longer part of the default or recommended generated client surface. The previous default derives on wrapper types were misleading because their `serde` representation does not match the Borsh/Wincode wire format.
+    - If you still want `serde` derives for a separate JSON representation, you can opt in explicitly via `traitOptions` as shown below. This does not make the generated types serde-compatible with their Borsh/Wincode wire format, but you can define a handwritten implementation with your own serde mapping as needed.
+
+    ```diff
+      traitOptions: {
+        baseDefaults: [
+          'borsh::BorshSerialize',
+          'borsh::BorshDeserialize',
+    +     'serde::Serialize',
+    +     'serde::Deserialize',
+          'Clone',
+          'Debug',
+          'Eq',
+          'PartialEq',
+        ],
+    +   featureFlags: {
+    +     serde: ['serde::Serialize', 'serde::Deserialize'],
+    +   },
+      }
+    ```
+
+- [#90](https://github.com/codama-idl/renderers-rust/pull/90) [`f214970`](https://github.com/codama-idl/renderers-rust/commit/f2149708b5e4a0167a2fe1289b685bd452497d17) Thanks [@grod220](https://github.com/grod220)! - Switch generated Rust code from `solana_pubkey::Pubkey` to `solana_address::Address` and update the default dependency set to newer Solana 3.x and `borsh` 1.0 versions. This affects generated program IDs, account/instruction types, PDA helpers, and public key literals, so downstream users may need to update imports and pubkey usage after regenerating clients.
+
 ## 2.0.1
 
 ### Patch Changes
