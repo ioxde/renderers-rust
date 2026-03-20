@@ -173,7 +173,6 @@ impl CreateRealm {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateRealmInstructionData {
     discriminator: u8,
 }
@@ -195,7 +194,6 @@ impl Default for CreateRealmInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateRealmInstructionArgs {
     pub name: String,
     pub config_args: RealmConfigParams,

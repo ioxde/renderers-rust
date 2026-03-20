@@ -13,13 +13,8 @@ use borsh::BorshSerialize;
 use solana_pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RealmConfigAccount {
     pub account_type: GovernanceAccountType,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub realm: Pubkey,
     pub community_token_config: GoverningTokenConfig,
     pub council_token_config: GoverningTokenConfig,

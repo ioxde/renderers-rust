@@ -6,12 +6,12 @@
 //!
 
 use crate::SPL_GOVERNANCE_ID;
-use kaigan::types::RemainderStr;
+use spl_collections::TrailingStr;
 
 pub const REALM_SEED: &'static [u8] = b"governance";
 /// Realm account identified by its name
 pub fn create_realm_pda(
-    name: RemainderStr,
+    name: TrailingStr,
     bump: u8,
 ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
     solana_pubkey::Pubkey::create_program_address(
@@ -20,7 +20,7 @@ pub fn create_realm_pda(
     )
 }
 /// Realm account identified by its name
-pub fn find_realm_pda(name: RemainderStr) -> (solana_pubkey::Pubkey, u8) {
+pub fn find_realm_pda(name: TrailingStr) -> (solana_pubkey::Pubkey, u8) {
     solana_pubkey::Pubkey::find_program_address(
         &[REALM_SEED, name.to_string().as_ref()],
         &SPL_GOVERNANCE_ID,

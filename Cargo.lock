@@ -816,14 +816,9 @@ name = "codama-renderers-rust-e2e-governance"
 version = "0.0.0"
 dependencies = [
  "anchor-lang",
- "assert_matches",
- "borsh 0.10.4",
- "kaigan",
+ "borsh 1.6.1",
  "num-derive",
  "num-traits",
- "serde",
- "serde-big-array",
- "serde_with",
  "solana-account",
  "solana-account-info",
  "solana-client",
@@ -833,6 +828,7 @@ dependencies = [
  "solana-program-error",
  "solana-pubkey",
  "solana-sdk",
+ "spl-collections",
  "thiserror 1.0.69",
 ]
 

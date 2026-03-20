@@ -102,7 +102,6 @@ impl DepositGoverningTokens {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepositGoverningTokensInstructionData {
     discriminator: u8,
 }
@@ -124,7 +123,6 @@ impl Default for DepositGoverningTokensInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepositGoverningTokensInstructionArgs {
     pub amount: u64,
 }

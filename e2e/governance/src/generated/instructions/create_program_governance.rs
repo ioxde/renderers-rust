@@ -125,7 +125,6 @@ impl CreateProgramGovernance {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateProgramGovernanceInstructionData {
     discriminator: u8,
 }
@@ -147,7 +146,6 @@ impl Default for CreateProgramGovernanceInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateProgramGovernanceInstructionArgs {
     pub config: GovernanceConfig,
     pub transfer_upgrade_authority: bool,

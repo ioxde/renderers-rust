@@ -11,23 +11,10 @@ use borsh::BorshSerialize;
 use solana_pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LegacyTokenOwnerRecord {
     pub account_type: GovernanceAccountType,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub realm: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub governing_token_mint: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub governing_token_owner: Pubkey,
     pub governing_token_deposit_amount: u64,
     pub unrelinquished_votes_count: u32,
@@ -35,7 +22,6 @@ pub struct LegacyTokenOwnerRecord {
     pub outstanding_proposal_count: u8,
     pub reserved: [u8; 7],
     pub governance_delegate: Option<Pubkey>,
-    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved_v2: [u8; 128],
 }
 

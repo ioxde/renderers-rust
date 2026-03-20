@@ -9,17 +9,12 @@ use crate::generated::types::GovernanceAccountType;
 use crate::generated::types::RealmConfig;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
-use kaigan::types::RemainderStr;
 use solana_pubkey::Pubkey;
+use spl_collections::TrailingStr;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RealmV1 {
     pub account_type: GovernanceAccountType,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub community_mint: Pubkey,
     pub config: RealmConfig,
     pub reserved: [u8; 6],
@@ -34,11 +29,11 @@ impl RealmV1 {
     /// Values are positional and appear in the following order:
     ///
     ///   0. `RealmV1::PREFIX`
-    ///   1. name (`RemainderStr`)
+    ///   1. name (`TrailingStr`)
     pub const PREFIX: &'static [u8] = "governance".as_bytes();
 
     pub fn create_pda(
-        name: RemainderStr,
+        name: TrailingStr,
         bump: u8,
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
@@ -47,7 +42,7 @@ impl RealmV1 {
         )
     }
 
-    pub fn find_pda(name: RemainderStr) -> (solana_pubkey::Pubkey, u8) {
+    pub fn find_pda(name: TrailingStr) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &["governance".as_bytes(), name.to_string().as_ref()],
             &crate::SPL_GOVERNANCE_ID,

@@ -18,24 +18,11 @@ use borsh::BorshSerialize;
 use solana_pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ProposalV2 {
     pub account_type: GovernanceAccountType,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub governance: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub governing_token_mint: Pubkey,
     pub state: ProposalState,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
     pub token_owner_record: Pubkey,
     pub signatories_count: u8,
     pub signatories_signed_off_count: u8,
@@ -56,7 +43,6 @@ pub struct ProposalV2 {
     pub max_vote_weight: Option<u64>,
     pub max_voting_time: Option<u32>,
     pub vote_threshold: Option<VoteThreshold>,
-    #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
     pub reserved: [u8; 64],
     pub name: String,
     pub description_link: String,

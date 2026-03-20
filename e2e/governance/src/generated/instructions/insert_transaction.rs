@@ -92,7 +92,6 @@ impl InsertTransaction {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InsertTransactionInstructionData {
     discriminator: u8,
 }
@@ -114,7 +113,6 @@ impl Default for InsertTransactionInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InsertTransactionInstructionArgs {
     pub option_index: u8,
     pub index: u16,

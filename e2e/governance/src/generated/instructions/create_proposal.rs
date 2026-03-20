@@ -127,7 +127,6 @@ impl CreateProposal {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateProposalInstructionData {
     discriminator: u8,
 }
@@ -149,7 +148,6 @@ impl Default for CreateProposalInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateProposalInstructionArgs {
     pub name: String,
     pub description_link: String,

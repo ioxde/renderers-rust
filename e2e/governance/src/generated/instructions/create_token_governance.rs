@@ -119,7 +119,6 @@ impl CreateTokenGovernance {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateTokenGovernanceInstructionData {
     discriminator: u8,
 }
@@ -141,7 +140,6 @@ impl Default for CreateTokenGovernanceInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateTokenGovernanceInstructionArgs {
     pub config: GovernanceConfig,
     pub transfer_account_authorities: bool,

@@ -87,7 +87,6 @@ impl RevokeGoverningTokens {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RevokeGoverningTokensInstructionData {
     discriminator: u8,
 }
@@ -109,7 +108,6 @@ impl Default for RevokeGoverningTokensInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RevokeGoverningTokensInstructionArgs {
     pub amount: u64,
 }

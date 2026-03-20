@@ -69,7 +69,6 @@ impl SignOffProposal {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SignOffProposalInstructionData {
     discriminator: u8,
 }

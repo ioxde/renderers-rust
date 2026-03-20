@@ -59,7 +59,6 @@ impl SetGovernanceDelegate {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetGovernanceDelegateInstructionData {
     discriminator: u8,
 }
@@ -81,7 +80,6 @@ impl Default for SetGovernanceDelegateInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetGovernanceDelegateInstructionArgs {
     pub new_governance_delegate: Option<Pubkey>,
 }

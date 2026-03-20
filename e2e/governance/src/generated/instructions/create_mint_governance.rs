@@ -119,7 +119,6 @@ impl CreateMintGovernance {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateMintGovernanceInstructionData {
     discriminator: u8,
 }
@@ -141,7 +140,6 @@ impl Default for CreateMintGovernanceInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateMintGovernanceInstructionArgs {
     pub config: GovernanceConfig,
     pub transfer_mint_authorities: bool,

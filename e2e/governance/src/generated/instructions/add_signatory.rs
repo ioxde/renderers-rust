@@ -80,7 +80,6 @@ impl AddSignatory {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AddSignatoryInstructionData {
     discriminator: u8,
 }
@@ -102,7 +101,6 @@ impl Default for AddSignatoryInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AddSignatoryInstructionArgs {
     pub signatory: Pubkey,
 }

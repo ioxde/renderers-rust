@@ -136,7 +136,6 @@ impl CastVote {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CastVoteInstructionData {
     discriminator: u8,
 }
@@ -158,7 +157,6 @@ impl Default for CastVoteInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CastVoteInstructionArgs {
     pub vote: Vote,
 }

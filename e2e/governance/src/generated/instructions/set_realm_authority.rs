@@ -71,7 +71,6 @@ impl SetRealmAuthority {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetRealmAuthorityInstructionData {
     discriminator: u8,
 }
@@ -93,7 +92,6 @@ impl Default for SetRealmAuthorityInstructionData {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetRealmAuthorityInstructionArgs {
     pub action: SetRealmAuthorityAction,
 }
