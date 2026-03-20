@@ -3,6 +3,7 @@
 
 {% block main %}
 
+{{ imports }}
 {% if program %}
 use crate::{{ program.name | snakeCase | upper }}_ID;
 {% endif %}

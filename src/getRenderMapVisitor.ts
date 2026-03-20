@@ -73,7 +73,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
         v =>
             extendVisitor(v, {
                 visitAccount(node) {
-                   const accountPath = stack.getPath('accountNode');
+                    const accountPath = stack.getPath('accountNode');
                     const program = findProgramNodeFromPath(accountPath);
                     if (!program) {
                         throw new Error('Account must be visited inside a program.');
@@ -259,9 +259,10 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             instruction: node,
                             instructionArgs,
                             program,
-                            typeManifest
+                            typeManifest,
                         }),
-                    );
+                        imports,
+                    });
                 },
 
                 visitPda(node) {
@@ -296,6 +297,9 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         .filter(seed => !isNode(seed.value, 'programIdValueNode'));
 
                     const programAddress = node.programId ?? program?.publicKey;
+
+                    // Template uses fully-qualified paths, so remove unused imports
+                    imports.remove('solana_pubkey::Pubkey');
 
                     return createRenderMap(`pdas/${snakeCase(node.name)}.rs`, {
                         content: render('pdasPage.njk', {

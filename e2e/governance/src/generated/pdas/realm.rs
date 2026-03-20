@@ -6,6 +6,7 @@
 //!
 
 use crate::SPL_GOVERNANCE_ID;
+use kaigan::types::RemainderStr;
 
 pub const REALM_SEED: &'static [u8] = b"governance";
 /// Realm account identified by its name

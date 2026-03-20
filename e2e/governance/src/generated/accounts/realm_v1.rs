@@ -86,14 +86,13 @@ pub fn fetch_all_realm_v1(
 ) -> Result<Vec<crate::shared::DecodedAccount<RealmV1>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::DecodedAccount<RealmV1>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
-        let account = accounts[i].as_ref().ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Account not found: {}", address),
-        ))?;
+        let account = accounts[i].as_ref().ok_or(std::io::Error::other(format!(
+            "Account not found: {address}"
+        )))?;
         let data = RealmV1::from_bytes(&account.data)?;
         decoded_accounts.push(crate::shared::DecodedAccount {
             address,
@@ -120,7 +119,7 @@ pub fn fetch_all_maybe_realm_v1(
 ) -> Result<Vec<crate::shared::MaybeAccount<RealmV1>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::MaybeAccount<RealmV1>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
@@ -152,7 +151,7 @@ impl anchor_lang::AccountSerialize for RealmV1 {}
 
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for RealmV1 {
-    fn owner() -> Pubkey {
+    fn owner() -> anchor_lang::prelude::Pubkey {
         crate::SPL_GOVERNANCE_ID
     }
 }

@@ -102,14 +102,13 @@ pub fn fetch_all_governance_v2(
 ) -> Result<Vec<crate::shared::DecodedAccount<GovernanceV2>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::DecodedAccount<GovernanceV2>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
-        let account = accounts[i].as_ref().ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Account not found: {}", address),
-        ))?;
+        let account = accounts[i].as_ref().ok_or(std::io::Error::other(format!(
+            "Account not found: {address}"
+        )))?;
         let data = GovernanceV2::from_bytes(&account.data)?;
         decoded_accounts.push(crate::shared::DecodedAccount {
             address,
@@ -136,7 +135,7 @@ pub fn fetch_all_maybe_governance_v2(
 ) -> Result<Vec<crate::shared::MaybeAccount<GovernanceV2>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::MaybeAccount<GovernanceV2>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
@@ -168,7 +167,7 @@ impl anchor_lang::AccountSerialize for GovernanceV2 {}
 
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for GovernanceV2 {
-    fn owner() -> Pubkey {
+    fn owner() -> anchor_lang::prelude::Pubkey {
         crate::SPL_GOVERNANCE_ID
     }
 }

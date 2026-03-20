@@ -132,7 +132,7 @@ impl anchor_lang::AccountSerialize for GuardV1 {}
 
 #[cfg(feature = "anchor")]
 impl anchor_lang::Owner for GuardV1 {
-    fn owner() -> Pubkey {
+    fn owner() -> anchor_lang::prelude::Pubkey {
         crate::WEN_TRANSFER_GUARD_ID
     }
 }
