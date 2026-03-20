@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 anchor = ["dep:anchor-lang"]
 anchor-idl-build = ["anchor", "anchor-lang?/idl-build"]
+fetch = ["dep:solana-client", "dep:solana-sdk"]
 serde = ["dep:serde", "dep:serde_with", "dep:serde-big-array"]
 test-sbf = []
 
@@ -26,6 +27,7 @@ solana-decode-error = { workspace = true }
 solana-instruction = { workspace = true }
 solana-program-error = { workspace = true }
 solana-pubkey = { workspace = true, features = ["curve25519", "borsh"] }
+solana-sdk = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
