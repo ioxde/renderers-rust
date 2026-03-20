@@ -27,7 +27,7 @@ impl SignatoryRecordV2 {
     ///   0. `SignatoryRecordV2::PREFIX`
     ///   1. proposal (`Pubkey`)
     ///   2. signatory (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         proposal: Pubkey,
@@ -36,7 +36,7 @@ impl SignatoryRecordV2 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 proposal.as_ref(),
                 signatory.as_ref(),
                 &[bump],
@@ -47,11 +47,7 @@ impl SignatoryRecordV2 {
 
     pub fn find_pda(proposal: &Pubkey, signatory: &Pubkey) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
-            &[
-                "governance".as_bytes(),
-                proposal.as_ref(),
-                signatory.as_ref(),
-            ],
+            &[b"governance", proposal.as_ref(), signatory.as_ref()],
             &crate::SPL_GOVERNANCE_ID,
         )
     }

@@ -26,7 +26,7 @@ impl ProposalDeposit {
     ///   0. `ProposalDeposit::PREFIX`
     ///   1. proposal (`Pubkey`)
     ///   2. deposit_payer (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "proposal-deposit".as_bytes();
+    pub const PREFIX: &'static [u8] = b"proposal-deposit";
 
     pub fn create_pda(
         proposal: Pubkey,
@@ -35,7 +35,7 @@ impl ProposalDeposit {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "proposal-deposit".as_bytes(),
+                b"proposal-deposit",
                 proposal.as_ref(),
                 deposit_payer.as_ref(),
                 &[bump],
@@ -47,7 +47,7 @@ impl ProposalDeposit {
     pub fn find_pda(proposal: &Pubkey, deposit_payer: &Pubkey) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "proposal-deposit".as_bytes(),
+                b"proposal-deposit",
                 proposal.as_ref(),
                 deposit_payer.as_ref(),
             ],

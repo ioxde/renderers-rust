@@ -28,7 +28,7 @@ impl VoteRecordV1 {
     ///   0. `VoteRecordV1::PREFIX`
     ///   1. proposal (`Pubkey`)
     ///   2. token_owner_record (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         proposal: Pubkey,
@@ -37,7 +37,7 @@ impl VoteRecordV1 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 proposal.as_ref(),
                 token_owner_record.as_ref(),
                 &[bump],
@@ -49,7 +49,7 @@ impl VoteRecordV1 {
     pub fn find_pda(proposal: &Pubkey, token_owner_record: &Pubkey) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 proposal.as_ref(),
                 token_owner_record.as_ref(),
             ],

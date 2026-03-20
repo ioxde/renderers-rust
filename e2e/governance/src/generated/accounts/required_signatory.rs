@@ -26,7 +26,7 @@ impl RequiredSignatory {
     ///   0. `RequiredSignatory::PREFIX`
     ///   1. governance (`Pubkey`)
     ///   2. signatory (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "required-signatory".as_bytes();
+    pub const PREFIX: &'static [u8] = b"required-signatory";
 
     pub fn create_pda(
         governance: Pubkey,
@@ -35,7 +35,7 @@ impl RequiredSignatory {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "required-signatory".as_bytes(),
+                b"required-signatory",
                 governance.as_ref(),
                 signatory.as_ref(),
                 &[bump],
@@ -47,7 +47,7 @@ impl RequiredSignatory {
     pub fn find_pda(governance: &Pubkey, signatory: &Pubkey) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "required-signatory".as_bytes(),
+                b"required-signatory",
                 governance.as_ref(),
                 signatory.as_ref(),
             ],

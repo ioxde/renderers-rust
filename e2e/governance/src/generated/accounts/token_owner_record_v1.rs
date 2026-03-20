@@ -33,7 +33,7 @@ impl TokenOwnerRecordV1 {
     ///   1. realm (`Pubkey`)
     ///   2. governing_token_mint (`Pubkey`)
     ///   3. governing_token_owner (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         realm: Pubkey,
@@ -43,7 +43,7 @@ impl TokenOwnerRecordV1 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 realm.as_ref(),
                 governing_token_mint.as_ref(),
                 governing_token_owner.as_ref(),
@@ -60,7 +60,7 @@ impl TokenOwnerRecordV1 {
     ) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 realm.as_ref(),
                 governing_token_mint.as_ref(),
                 governing_token_owner.as_ref(),

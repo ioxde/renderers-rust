@@ -28,7 +28,7 @@ impl GovernanceV1 {
     ///   0. `GovernanceV1::PREFIX`
     ///   1. realm (`Pubkey`)
     ///   2. seed (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "account-governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"account-governance";
 
     pub fn create_pda(
         realm: Pubkey,
@@ -37,7 +37,7 @@ impl GovernanceV1 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "account-governance".as_bytes(),
+                b"account-governance",
                 realm.as_ref(),
                 seed.as_ref(),
                 &[bump],
@@ -48,11 +48,7 @@ impl GovernanceV1 {
 
     pub fn find_pda(realm: &Pubkey, seed: &Pubkey) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
-            &[
-                "account-governance".as_bytes(),
-                realm.as_ref(),
-                seed.as_ref(),
-            ],
+            &[b"account-governance", realm.as_ref(), seed.as_ref()],
             &crate::SPL_GOVERNANCE_ID,
         )
     }

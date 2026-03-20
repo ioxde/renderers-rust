@@ -31,21 +31,21 @@ impl RealmV2 {
     ///
     ///   0. `RealmV2::PREFIX`
     ///   1. name (`TrailingStr`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         name: TrailingStr,
         bump: u8,
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
-            &["governance".as_bytes(), name.to_string().as_ref(), &[bump]],
+            &[b"governance", name.to_string().as_ref(), &[bump]],
             &crate::SPL_GOVERNANCE_ID,
         )
     }
 
     pub fn find_pda(name: TrailingStr) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
-            &["governance".as_bytes(), name.to_string().as_ref()],
+            &[b"governance", name.to_string().as_ref()],
             &crate::SPL_GOVERNANCE_ID,
         )
     }

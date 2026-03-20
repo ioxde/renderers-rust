@@ -35,7 +35,7 @@ impl ProposalTransactionV2 {
     ///   1. proposal (`Pubkey`)
     ///   2. option_index (`u8`)
     ///   3. index (`u16`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         proposal: Pubkey,
@@ -45,7 +45,7 @@ impl ProposalTransactionV2 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 proposal.as_ref(),
                 option_index.to_string().as_ref(),
                 index.to_string().as_ref(),
@@ -62,7 +62,7 @@ impl ProposalTransactionV2 {
     ) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 proposal.as_ref(),
                 option_index.to_string().as_ref(),
                 index.to_string().as_ref(),

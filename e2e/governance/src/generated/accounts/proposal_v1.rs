@@ -52,7 +52,7 @@ impl ProposalV1 {
     ///   1. governance (`Pubkey`)
     ///   2. governing_token_mint (`Pubkey`)
     ///   3. proposal_seed (`Pubkey`)
-    pub const PREFIX: &'static [u8] = "governance".as_bytes();
+    pub const PREFIX: &'static [u8] = b"governance";
 
     pub fn create_pda(
         governance: Pubkey,
@@ -62,7 +62,7 @@ impl ProposalV1 {
     ) -> Result<solana_pubkey::Pubkey, solana_pubkey::PubkeyError> {
         solana_pubkey::Pubkey::create_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 governance.as_ref(),
                 governing_token_mint.as_ref(),
                 proposal_seed.as_ref(),
@@ -79,7 +79,7 @@ impl ProposalV1 {
     ) -> (solana_pubkey::Pubkey, u8) {
         solana_pubkey::Pubkey::find_program_address(
             &[
-                "governance".as_bytes(),
+                b"governance",
                 governance.as_ref(),
                 governing_token_mint.as_ref(),
                 proposal_seed.as_ref(),
