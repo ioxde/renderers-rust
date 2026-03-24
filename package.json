@@ -28,6 +28,7 @@
         "client"
     ],
     "scripts": {
+        "prepare": "npm run build",
         "build": "rimraf dist && tsup && tsc -p ./tsconfig.declarations.json",
         "dev": "vitest --project node",
         "lint": "eslint . && prettier --check .",
