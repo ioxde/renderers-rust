@@ -875,6 +875,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "codama-renderers-rust-e2e-raydium-cpmm"
+version = "0.0.0"
+dependencies = [
+ "anchor-lang",
+ "borsh 1.6.1",
+ "num-derive",
+ "num-traits",
+ "solana-account",
+ "solana-account-info",
+ "solana-client",
+ "solana-cpi",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-pubkey",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "codama-renderers-rust-e2e-system"
 version = "0.0.0"
 dependencies = [
