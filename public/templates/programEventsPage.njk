@@ -19,9 +19,21 @@ pub enum {{ program.name | pascalCase }}EventKind {
 }
 
 /// Identifies a `{{ program.name | snakeCase }}` event from the provided data.
+{% if framingCheck %}
+/// Data that lacks the shared CPI framing is rejected with a single compare.
+{% endif %}
 pub fn identify_{{ program.name | snakeCase }}_event(data: &[u8]) -> Option<{{ program.name | pascalCase }}EventKind> {
-{% for event in eventsWithDiscriminators | sort(false, false, 'name') %}
-    if {{ event.conditions | join(' && ') }} {
+{% if framingCheck %}
+    if {{ framingCheck }} {
+{% for event in framedEvents | sort(false, false, 'name') %}
+        if {{ event.condition }} {
+            return Some({{ program.name | pascalCase }}EventKind::{{ event.name | pascalCase }});
+        }
+{% endfor %}
+    }
+{% endif %}
+{% for event in unframedEvents | sort(false, false, 'name') %}
+    if {{ event.condition }} {
         return Some({{ program.name | pascalCase }}EventKind::{{ event.name | pascalCase }});
     }
 {% endfor %}
@@ -29,7 +41,7 @@ pub fn identify_{{ program.name | snakeCase }}_event(data: &[u8]) -> Option<{{ p
 }
 
 /// Parsed event variants for the `{{ program.name | snakeCase }}` program.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug{% if eventEnumEq %}, Eq{% endif %}, PartialEq)]
 pub enum {{ program.name | pascalCase }}Event {
 {% for event in eventsWithDiscriminators | sort(false, false, 'name') %}
     {{ event.name | pascalCase }}({{ event.name | pascalCase }}),
@@ -37,6 +49,16 @@ pub enum {{ program.name | pascalCase }}Event {
 }
 
 /// Tries to parse a `{{ program.name | snakeCase }}` event from the provided data.
+///
+/// Returns `None` when no event matches; `Some(Err(_))` when one matches but fails to
+/// deserialize. Use [`Option::transpose`] to propagate failures with `?`, or scan a batch:
+///
+/// ```ignore
+/// let events: Vec<{{ program.name | pascalCase }}Event> = datas
+///     .iter()
+///     .filter_map(|data| try_parse_{{ program.name | snakeCase }}_event(data))
+///     .collect::<Result<_, _>>()?;
+/// ```
 pub fn try_parse_{{ program.name | snakeCase }}_event(data: &[u8]) -> Option<Result<{{ program.name | pascalCase }}Event, std::io::Error>> {
     let event_kind = identify_{{ program.name | snakeCase }}_event(data)?;
     Some(match event_kind {

@@ -29,32 +29,28 @@ pub enum RaydiumLaunchpadEventKind {
 }
 
 /// Identifies a `raydium_launchpad` event from the provided data.
+/// Data that lacks the shared CPI framing is rejected with a single compare.
 pub fn identify_raydium_launchpad_event(data: &[u8]) -> Option<RaydiumLaunchpadEventKind> {
     if data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len()) == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
-        && data.get(8..16) == Some(&CLAIM_VESTED_EVENT_DISCRIMINATOR[..])
     {
-        return Some(RaydiumLaunchpadEventKind::ClaimVestedEvent);
-    }
-    if data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len()) == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
-        && data.get(8..16) == Some(&CREATE_VESTING_EVENT_DISCRIMINATOR[..])
-    {
-        return Some(RaydiumLaunchpadEventKind::CreateVestingEvent);
-    }
-    if data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len()) == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
-        && data.get(8..16) == Some(&POOL_CREATE_EVENT_DISCRIMINATOR[..])
-    {
-        return Some(RaydiumLaunchpadEventKind::PoolCreateEvent);
-    }
-    if data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len()) == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
-        && data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])
-    {
-        return Some(RaydiumLaunchpadEventKind::TradeEvent);
+        if data.get(8..16) == Some(&CLAIM_VESTED_EVENT_DISCRIMINATOR[..]) {
+            return Some(RaydiumLaunchpadEventKind::ClaimVestedEvent);
+        }
+        if data.get(8..16) == Some(&CREATE_VESTING_EVENT_DISCRIMINATOR[..]) {
+            return Some(RaydiumLaunchpadEventKind::CreateVestingEvent);
+        }
+        if data.get(8..16) == Some(&POOL_CREATE_EVENT_DISCRIMINATOR[..]) {
+            return Some(RaydiumLaunchpadEventKind::PoolCreateEvent);
+        }
+        if data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..]) {
+            return Some(RaydiumLaunchpadEventKind::TradeEvent);
+        }
     }
     None
 }
 
 /// Parsed event variants for the `raydium_launchpad` program.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RaydiumLaunchpadEvent {
     ClaimVestedEvent(ClaimVestedEvent),
     CreateVestingEvent(CreateVestingEvent),
@@ -63,6 +59,16 @@ pub enum RaydiumLaunchpadEvent {
 }
 
 /// Tries to parse a `raydium_launchpad` event from the provided data.
+///
+/// Returns `None` when no event matches; `Some(Err(_))` when one matches but fails to
+/// deserialize. Use [`Option::transpose`] to propagate failures with `?`, or scan a batch:
+///
+/// ```ignore
+/// let events: Vec<RaydiumLaunchpadEvent> = datas
+///     .iter()
+///     .filter_map(|data| try_parse_raydium_launchpad_event(data))
+///     .collect::<Result<_, _>>()?;
+/// ```
 pub fn try_parse_raydium_launchpad_event(
     data: &[u8],
 ) -> Option<Result<RaydiumLaunchpadEvent, std::io::Error>> {

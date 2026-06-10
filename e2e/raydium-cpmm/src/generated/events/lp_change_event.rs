@@ -30,16 +30,19 @@ pub const LP_CHANGE_EVENT_DISCRIMINATOR: [u8; 8] = [121, 163, 205, 201, 57, 218,
 
 impl LpChangeEvent {
     #[inline(always)]
-    pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-        if data.get(..LP_CHANGE_EVENT_DISCRIMINATOR.len())
-            != Some(&LP_CHANGE_EVENT_DISCRIMINATOR[..])
-        {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "invalid event discriminator",
-            ));
+    pub fn matches(data: &[u8]) -> bool {
+        data.get(..LP_CHANGE_EVENT_DISCRIMINATOR.len()) == Some(&LP_CHANGE_EVENT_DISCRIMINATOR[..])
+    }
+
+    /// Returns `None` when the data does not match this event's discriminator
+    /// bytes; `Some(Err(_))` when it matches but the body fails to deserialize.
+    /// Use [`Option::transpose`] to propagate the failure with `?`.
+    #[inline(always)]
+    pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>> {
+        if !Self::matches(data) {
+            return None;
         }
         let mut data = &data[8..];
-        Self::deserialize(&mut data)
+        Some(Self::deserialize(&mut data))
     }
 }

@@ -28,7 +28,7 @@ import { expect, test, vi } from 'vitest';
 import { getRenderMapVisitor } from '../src';
 import { codeContains, codeDoesNotContains } from './_setup';
 
-test('it renders an event with discriminator as a struct with from_bytes', () => {
+test('it renders an event with discriminator as a struct with matches and try_parse', () => {
     const node = programNode({
         events: [
             eventNode({
@@ -69,10 +69,13 @@ test('it renders an event with discriminator as a struct with from_bytes', () =>
         'pub amount: u64,',
         'pub price: u64,',
         'TRADE_EVENT_DISCRIMINATOR',
-        'pub fn from_bytes',
-        '"invalid event discriminator"',
-        'Self::deserialize(&mut data)',
+        'pub fn matches(data: &[u8]) -> bool',
+        'data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'if !Self::matches(data)',
+        'Some(Self::deserialize(&mut data))',
     ]);
+    codeDoesNotContains(getFromRenderMap(renderMap, 'events/trade_event.rs').content, ['from_bytes']);
 });
 
 test('it renders an event without discriminator as a plain struct', () => {
@@ -92,7 +95,7 @@ test('it renders an event without discriminator as a plain struct', () => {
         'pub struct SimpleEvent',
         'pub value: u32,',
     ]);
-    codeDoesNotContains(getFromRenderMap(renderMap, 'events/simple_event.rs').content, ['DISCRIMINATOR', 'from_bytes']);
+    codeDoesNotContains(getFromRenderMap(renderMap, 'events/simple_event.rs').content, ['DISCRIMINATOR', 'try_parse']);
 });
 
 test('it does not render events module for programs without events', () => {
@@ -151,7 +154,7 @@ test('it renders an event with an empty struct', () => {
 
     const renderMap = visit(node, getRenderMapVisitor());
     codeContains(getFromRenderMap(renderMap, 'events/empty_event.rs').content, ['pub struct EmptyEvent']);
-    codeDoesNotContains(getFromRenderMap(renderMap, 'events/empty_event.rs').content, ['from_bytes', 'DISCRIMINATOR']);
+    codeDoesNotContains(getFromRenderMap(renderMap, 'events/empty_event.rs').content, ['try_parse', 'DISCRIMINATOR']);
 });
 
 test('it renders event docs', () => {
@@ -207,7 +210,7 @@ test('it renders an event with a nested struct field', () => {
     ]);
 });
 
-test('it renders field discriminator constants and skips from_bytes without hidden prefix', () => {
+test('it renders field discriminator constants and skips try_parse without hidden prefix', () => {
     const node = programNode({
         events: [
             eventNode({
@@ -240,10 +243,10 @@ test('it renders field discriminator constants and skips from_bytes without hidd
 
     codeContains(code, ['MIXED_EVENT_EVENT_TYPE: u8 = 7']);
     codeContains(code, ['MIXED_EVENT_DISCRIMINATOR']);
-    codeDoesNotContains(code, ['from_bytes']);
+    codeDoesNotContains(code, ['try_parse']);
 });
 
-test('it validates all constant discriminators in from_bytes for multi-disc events', () => {
+test('it validates all constant discriminators in matches for multi-disc events', () => {
     const disc1 = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -268,14 +271,19 @@ test('it validates all constant discriminators in from_bytes for multi-disc even
     const code = getFromRenderMap(renderMap, 'events/multi_disc_event.rs').content;
 
     codeContains(code, [
-        'pub fn from_bytes',
-        'MULTI_DISC_EVENT_DISCRIMINATOR.len()) != Some(&MULTI_DISC_EVENT_DISCRIMINATOR[..])',
-        'data.get(12..16) != Some(&MULTI_DISC_EVENT_DISCRIMINATOR2[..])',
-        'Self::deserialize(&mut data)',
+        // matches ANDs the positive form of every discriminator check.
+        'pub fn matches(data: &[u8]) -> bool',
+        'data.get(..MULTI_DISC_EVENT_DISCRIMINATOR.len()) == Some(&MULTI_DISC_EVENT_DISCRIMINATOR[..]) && data.get(12..16) == Some(&MULTI_DISC_EVENT_DISCRIMINATOR2[..])',
+        // try_parse delegates the discriminator checks to matches.
+        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'if !Self::matches(data)',
+        'return None;',
+        'Some(Self::deserialize(&mut data))',
     ]);
+    codeDoesNotContains(code, ['from_bytes', 'Err(std::io::Error::new']);
 });
 
-test('it uses a literal range in from_bytes for u8-array constant discriminators at non-zero offset', () => {
+test('it uses a literal range in matches for u8-array constant discriminators at non-zero offset', () => {
     const prefix = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -305,12 +313,12 @@ test('it uses a literal range in from_bytes for u8-array constant discriminators
 
     codeContains(code, [
         'pub const TAIL_EVENT_DISCRIMINATOR2: [u8; 3] = [1, 2, 3];',
-        'if data.get(8..11) != Some(&TAIL_EVENT_DISCRIMINATOR2[..])',
+        'data.get(8..11) == Some(&TAIL_EVENT_DISCRIMINATOR2[..])',
         'let mut data = &data[8..];',
     ]);
 });
 
-test('it falls back to starts_with in from_bytes when a non-zero-offset discriminator size is unknown', () => {
+test('it falls back to starts_with in matches when a non-zero-offset discriminator size is unknown', () => {
     const prefix = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -341,14 +349,14 @@ test('it falls back to starts_with in from_bytes when a non-zero-offset discrimi
 
     codeContains(code, [
         'pub const TAIL_EVENT_DISCRIMINATOR2: DiscAlias = [1, 2, 3];',
-        'if !data.get(8..).is_some_and(|tail| tail.starts_with(&TAIL_EVENT_DISCRIMINATOR2[..]))',
+        'data.get(8..).is_some_and(|tail| tail.starts_with(&TAIL_EVENT_DISCRIMINATOR2[..]))',
         'let mut data = &data[8..];',
     ]);
 });
 
-test('it compares number constant discriminators via to_le_bytes in from_bytes', () => {
+test('it compares number constant discriminators via to_le_bytes in matches', () => {
     // Number constants render as scalar Rust constants (`pub const X: u32`),
-    // so from_bytes must compare their byte encoding, not slice the constant.
+    // so matches must compare their byte encoding, not slice the constant.
     const numDisc = constantValueNode(numberTypeNode('u32'), numberValueNode(42));
     const node = programNode({
         events: [
@@ -394,19 +402,19 @@ test('it compares number constant discriminators via to_le_bytes in from_bytes',
     const headCode = getFromRenderMap(renderMap, 'events/num_head_event.rs').content;
     codeContains(headCode, [
         'pub const NUM_HEAD_EVENT_DISCRIMINATOR: u32 = 42;',
-        'if data.get(..4) != Some(&NUM_HEAD_EVENT_DISCRIMINATOR.to_le_bytes())',
+        'data.get(..4) == Some(&NUM_HEAD_EVENT_DISCRIMINATOR.to_le_bytes())',
         'let mut data = &data[4..];',
     ]);
 
     const tailCode = getFromRenderMap(renderMap, 'events/num_tail_event.rs').content;
     codeContains(tailCode, [
         'pub const NUM_TAIL_EVENT_DISCRIMINATOR2: u32 = 42;',
-        'if data.get(8..12) != Some(&NUM_TAIL_EVENT_DISCRIMINATOR2.to_le_bytes())',
+        'data.get(8..12) == Some(&NUM_TAIL_EVENT_DISCRIMINATOR2.to_le_bytes())',
         'let mut data = &data[8..];',
     ]);
 });
 
-test('it uses literal byte count in from_bytes for multi-prefix hidden prefix', () => {
+test('it uses literal byte count in try_parse for multi-prefix hidden prefix', () => {
     const prefix1 = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -434,7 +442,7 @@ test('it uses literal byte count in from_bytes for multi-prefix hidden prefix', 
     codeDoesNotContains(code, ['.len()..']);
 });
 
-test('it uses literal byte count in from_bytes when constant disc is not at offset 0', () => {
+test('it uses literal byte count in try_parse when constant disc is not at offset 0', () => {
     const prefix = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -461,7 +469,7 @@ test('it uses literal byte count in from_bytes when constant disc is not at offs
     codeDoesNotContains(code, ['.len()..']);
 });
 
-test('it does not render from_bytes when hidden prefix has a non-fixed-size entry', () => {
+test('it does not render try_parse when hidden prefix has a non-fixed-size entry', () => {
     const prefix1 = constantValueNode(
         fixedSizeTypeNode(bytesTypeNode(), 8),
         bytesValueNode('base16', 'aabbccdd11223344'),
@@ -486,7 +494,7 @@ test('it does not render from_bytes when hidden prefix has a non-fixed-size entr
     const code = getFromRenderMap(renderMap, 'events/dynamic_prefix_event.rs').content;
 
     codeContains(code, ['pub struct DynamicPrefixEvent', 'DYNAMIC_PREFIX_EVENT_DISCRIMINATOR']);
-    codeDoesNotContains(code, ['from_bytes']);
+    codeDoesNotContains(code, ['try_parse']);
 });
 // --- Program-level event codegen tests ---
 
@@ -565,9 +573,10 @@ test('it renders identify and try_parse for events with constant discriminators'
 
     codeContains(code, [
         'pub fn identify_my_program_event(data: &[u8]) -> Option<MyProgramEventKind>',
-        'SETTLE_EVENT_DISCRIMINATOR',
+        // Every event inlines its discriminator checks, mirroring the JS renderer.
+        'if data.get(..SETTLE_EVENT_DISCRIMINATOR.len()) == Some(&SETTLE_EVENT_DISCRIMINATOR[..])',
         'return Some(MyProgramEventKind::SettleEvent)',
-        'TRADE_EVENT_DISCRIMINATOR',
+        'if data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
         'return Some(MyProgramEventKind::TradeEvent)',
         'pub fn try_parse_my_program_event(data: &[u8]) -> Option<Result<MyProgramEvent, std::io::Error>>',
         'identify_my_program_event(data)?',
@@ -575,10 +584,10 @@ test('it renders identify and try_parse for events with constant discriminators'
         /MyProgramEventKind::SettleEvent => \{\s*let mut data = &data\[8\.\.\];\s*SettleEvent::deserialize\(&mut data\)/,
         /MyProgramEventKind::TradeEvent => \{\s*let mut data = &data\[8\.\.\];\s*TradeEvent::deserialize\(&mut data\)/,
     ]);
-    codeDoesNotContains(code, ['from_bytes', 'Err(std::io::Error::new']);
+    codeDoesNotContains(code, ['from_bytes', 'Err(std::io::Error::new', '::matches(data)']);
 });
 
-test('it uses BorshDeserialize for events without from_bytes in try_parse', () => {
+test('it uses BorshDeserialize for events without matches helpers in try_parse', () => {
     const node = programNode({
         events: [
             eventNode({
@@ -625,7 +634,12 @@ test('it uses BorshDeserialize for events without from_bytes in try_parse', () =
         /MyProgramEventKind::TradeEvent => \{\s*let mut data = &data\[8\.\.\];\s*TradeEvent::deserialize\(&mut data\)/,
     ]);
     codeContains(code, ['SimpleEvent::deserialize(&mut data)']);
-    codeDoesNotContains(code, ['from_bytes']);
+    // Both events inline their discriminator checks, whether or not a matches helper exists.
+    codeContains(code, [
+        'data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        'data.get(..SIMPLE_EVENT_DISCRIMINATOR.len()) == Some(&SIMPLE_EVENT_DISCRIMINATOR[..])',
+    ]);
+    codeDoesNotContains(code, ['from_bytes', '::matches(data)']);
 });
 
 test('it excludes non-fixed-size prefix events from program-level try_parse', () => {
@@ -1081,6 +1095,67 @@ test('it handles multiple constant discriminators and excludes events with unres
     codeDoesNotContains(code, ['NoDefaultEvent']);
 });
 
+test('it derives Eq on the aggregate event enum when all variants derive it', () => {
+    const node = programNode({
+        events: [
+            eventNode({
+                data: structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                discriminators: [
+                    constantDiscriminatorNode(
+                        constantValueNode(
+                            fixedSizeTypeNode(bytesTypeNode(), 8),
+                            bytesValueNode('base16', 'aabbccdd11223344'),
+                        ),
+                    ),
+                ],
+                name: 'tradeEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const code = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(code, [/#\[derive\(Clone, Debug, Eq, PartialEq\)\]\s*pub enum MyProgramEvent \{/]);
+});
+
+test('it omits Eq on the aggregate event enum when a variant does not derive it', () => {
+    const node = programNode({
+        events: [
+            eventNode({
+                data: structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                discriminators: [
+                    constantDiscriminatorNode(
+                        constantValueNode(
+                            fixedSizeTypeNode(bytesTypeNode(), 8),
+                            bytesValueNode('base16', 'aabbccdd11223344'),
+                        ),
+                    ),
+                ],
+                name: 'tradeEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(
+        node,
+        getRenderMapVisitor({
+            traitOptions: {
+                overrides: {
+                    tradeEvent: ['borsh::BorshSerialize', 'borsh::BorshDeserialize', 'Clone', 'Debug', 'PartialEq'],
+                },
+            },
+        }),
+    );
+    const code = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(code, [/#\[derive\(Clone, Debug, PartialEq\)\]\s*pub enum MyProgramEvent \{/]);
+});
+
 // --- Event framing (CPI-framed) tests ---
 
 const cpiFraming = { kind: 'anchorEventCpi', sharedConstantName: 'eventCpiPrefix' as CamelCaseString };
@@ -1121,9 +1196,9 @@ test('it hoists the shared framing constant to the program-events file', () => {
 
     codeContains(programEventsCode, [
         'pub const EVENT_CPI_PREFIX: [u8; 8] = [170, 187, 204, 221, 17, 34, 51, 68];',
-        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
-        'return Some(MyProgramEventKind::TradeEvent)',
-        'return Some(MyProgramEventKind::SettleEvent)',
+        // identify hoists the shared framing check and inlines each event's own
+        // discriminator checks inside the framed block.
+        /if data\.get\(\.\.EVENT_CPI_PREFIX\.len\(\)\) == Some\(&EVENT_CPI_PREFIX\[\.\.\]\) \{\s*if data\.get\(8\.\.16\) == Some\(&SETTLE_EVENT_DISCRIMINATOR\[\.\.\]\) \{\s*return Some\(MyProgramEventKind::SettleEvent\);\s*\}\s*if data\.get\(8\.\.16\) == Some\(&TRADE_EVENT_DISCRIMINATOR\[\.\.\]\) \{\s*return Some\(MyProgramEventKind::TradeEvent\);\s*\}\s*\}/,
     ]);
     expect(programEventsCode.match(/pub const EVENT_CPI_PREFIX/g)).toHaveLength(1);
 });
@@ -1142,7 +1217,7 @@ test('it renders per-event _DISCRIMINATOR with IDL bytes, not framing bytes', ()
     codeDoesNotContains(tradeEventCode, ['[170, 187, 204, 221, 17, 34, 51, 68]', 'pub const EVENT_CPI_PREFIX']);
 });
 
-test('it generates from_bytes that validates both the framing prefix and the event-specific discriminator', () => {
+test('it generates try_parse that delegates framing and discriminator validation to matches', () => {
     const node = programNode({
         events: [framedEvent('tradeEvent', tradeDisc)],
         name: 'myProgram',
@@ -1153,16 +1228,18 @@ test('it generates from_bytes that validates both the framing prefix and the eve
     const tradeEventCode = getFromRenderMap(renderMap, 'events/trade_event.rs').content;
 
     codeContains(tradeEventCode, [
-        'pub fn from_bytes',
-        'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
-        'data.get(8..16) != Some(&TRADE_EVENT_DISCRIMINATOR[..])',
-        // The framing check and the event discriminator check report distinct errors.
-        /data\.get\(\.\.EVENT_CPI_PREFIX\.len\(\)\) != Some\(&EVENT_CPI_PREFIX\[\.\.\]\) \{\s*return Err\(std::io::Error::new\(\s*std::io::ErrorKind::InvalidData,\s*"invalid event CPI framing",/,
-        /data\.get\(8\.\.16\) != Some\(&TRADE_EVENT_DISCRIMINATOR\[\.\.\]\) \{\s*return Err\(std::io::Error::new\(\s*std::io::ErrorKind::InvalidData,\s*"invalid event discriminator",/,
+        // matches validates the CPI framing prefix and the event discriminator together.
+        'pub fn matches(data: &[u8]) -> bool',
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..]) && data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        // try_parse signals mismatch as a value instead of an error.
+        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'if !Self::matches(data)',
+        'return None;',
         // Both discriminator sizes are known, so the skip folds to a literal
         // with an explanatory comment on the line above.
-        /\/\/ EVENT_CPI_PREFIX \(8\) \+ TRADE_EVENT_DISCRIMINATOR \(8\)\n\s*let mut data = &data\[16\.\.\];\n\s*Self::deserialize\(&mut data\)/,
+        /\/\/ EVENT_CPI_PREFIX \(8\) \+ TRADE_EVENT_DISCRIMINATOR \(8\)\n\s*let mut data = &data\[16\.\.\];\n\s*Some\(Self::deserialize\(&mut data\)\)/,
     ]);
+    codeDoesNotContains(tradeEventCode, ['from_bytes', 'Err(std::io::Error::new']);
 });
 
 test('it folds the framed skip to a literal for u8-array discriminators', () => {
@@ -1204,8 +1281,8 @@ test('it folds the framed skip to a literal for u8-array discriminators', () => 
     const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
 
     codeContains(eventCode, [
-        'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
-        'data.get(8..16) != Some(&MIXED_EVENT_DISCRIMINATOR[..])',
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
+        'data.get(8..16) == Some(&MIXED_EVENT_DISCRIMINATOR[..])',
         'let mut data = &data[16..];',
     ]);
     codeContains(programEventsCode, [
@@ -1213,7 +1290,7 @@ test('it folds the framed skip to a literal for u8-array discriminators', () => 
     ]);
 });
 
-test('it compares number constant discriminators via to_le_bytes in framed from_bytes', () => {
+test('it compares number constant discriminators via to_le_bytes in framed matches', () => {
     const numEventDisc = constantValueNode(numberTypeNode('u32'), numberValueNode(42));
     const node = programNode({
         events: [
@@ -1240,8 +1317,8 @@ test('it compares number constant discriminators via to_le_bytes in framed from_
 
     codeContains(eventCode, [
         'pub const NUM_FRAMED_EVENT_DISCRIMINATOR: u32 = 42;',
-        'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
-        'if data.get(8..12) != Some(&NUM_FRAMED_EVENT_DISCRIMINATOR.to_le_bytes())',
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
+        'data.get(8..12) == Some(&NUM_FRAMED_EVENT_DISCRIMINATOR.to_le_bytes())',
         // Both sizes are known (8 framing + 4 number), so the skip folds to a literal.
         'let mut data = &data[12..];',
     ]);
@@ -1283,16 +1360,22 @@ test('it falls back to a chained .len() slice skip when a framed discriminator s
     const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
 
     codeContains(eventCode, [
-        'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
-        'if !data.get(8..).is_some_and(|tail| tail.starts_with(&MIXED_EVENT_DISCRIMINATOR[..]))',
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
+        'data.get(8..).is_some_and(|tail| tail.starts_with(&MIXED_EVENT_DISCRIMINATOR[..]))',
         // The framing size (8) is known and folds to a literal; the unknown-size
         // discriminator chains a `[.len()..]` slice so no `+` arithmetic is emitted.
         /\/\/ EVENT_CPI_PREFIX \(8\) \+ MIXED_EVENT_DISCRIMINATOR\n\s*let mut data = &data\[8\.\.\]\[MIXED_EVENT_DISCRIMINATOR\.len\(\)\.\.\];/,
     ]);
-    codeContains(programEventsCode, ['let mut data = &data[8..][MIXED_EVENT_DISCRIMINATOR.len()..];']);
+    // identify inlines the own-discriminator check inside the hoisted framing block,
+    // and the try_parse skip references the same unknown-size constant.
+    codeContains(programEventsCode, [
+        'use crate::generated::events::MIXED_EVENT_DISCRIMINATOR;',
+        'data.get(8..).is_some_and(|tail| tail.starts_with(&MIXED_EVENT_DISCRIMINATOR[..]))',
+        'let mut data = &data[8..][MIXED_EVENT_DISCRIMINATOR.len()..];',
+    ]);
 });
 
-test('it references the hoisted framing constant in identify and try_parse', () => {
+test('it hoists a single framing check in identify for framed events', () => {
     const node = programNode({
         events: [framedEvent('tradeEvent', tradeDisc), framedEvent('settleEvent', settleDisc)],
         name: 'myProgram',
@@ -1304,14 +1387,20 @@ test('it references the hoisted framing constant in identify and try_parse', () 
 
     codeContains(programEventsCode, [
         'pub fn identify_my_program_event',
-        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
-        '&& data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
-        '&& data.get(8..16) == Some(&SETTLE_EVENT_DISCRIMINATOR[..])',
+        // The aggregate imports the per-event discriminator constants for the inlined checks.
+        'use crate::generated::events::TRADE_EVENT_DISCRIMINATOR;',
+        'use crate::generated::events::SETTLE_EVENT_DISCRIMINATOR;',
+        'if data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        'if data.get(8..16) == Some(&SETTLE_EVENT_DISCRIMINATOR[..])',
         'pub fn try_parse_my_program_event',
         // Skips are numeric literals (8 framing + 8 event disc), so match each arm to keep them distinct.
         /MyProgramEventKind::TradeEvent => \{\s*\/\/ EVENT_CPI_PREFIX \(8\) \+ TRADE_EVENT_DISCRIMINATOR \(8\)\n\s*let mut data = &data\[16\.\.\];\n\s*TradeEvent::deserialize\(&mut data\)/,
         /MyProgramEventKind::SettleEvent => \{\s*\/\/ EVENT_CPI_PREFIX \(8\) \+ SETTLE_EVENT_DISCRIMINATOR \(8\)\n\s*let mut data = &data\[16\.\.\];\n\s*SettleEvent::deserialize\(&mut data\)/,
     ]);
+    // Foreign data is rejected with a single framing compare: the framing bytes
+    // appear once in identify, and no arm re-checks them via matches.
+    expect(programEventsCode.match(/data\.get\(\.\.EVENT_CPI_PREFIX\.len\(\)\)/g)).toHaveLength(1);
+    codeDoesNotContains(programEventsCode, ['TradeEvent::matches', 'SettleEvent::matches']);
 });
 
 test('it does not hoist a shared constant when no event has framing', () => {
@@ -1360,14 +1449,171 @@ test('it renders framed and non-framed events side-by-side without cross-contami
 
     codeContains(tradeEventCode, [
         'use crate::generated::events::EVENT_CPI_PREFIX;',
-        'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..])',
     ]);
     codeDoesNotContains(plainEventCode, ['EVENT_CPI_PREFIX']);
     codeContains(programEventsCode, [
         'pub const EVENT_CPI_PREFIX: [u8; 8] = [170, 187, 204, 221, 17, 34, 51, 68];',
         'return Some(MyProgramEventKind::TradeEvent)',
         'return Some(MyProgramEventKind::PlainEvent)',
+        // The framed event sits inside the hoisted framing block; the unframed
+        // event's check comes after the block closes.
+        /return Some\(MyProgramEventKind::TradeEvent\);\s*\}\s*\}\s*if data\.get\(\.\.PLAIN_EVENT_DISCRIMINATOR\.len\(\)\) == Some\(&PLAIN_EVENT_DISCRIMINATOR\[\.\.\]\)/,
     ]);
+});
+
+test('it fails fast when an event file path collides with the program events file', () => {
+    const node = programNode({
+        events: [
+            framedEvent('tradeEvent', tradeDisc),
+            // snake_case file name collides with the aggregate `my_program_events.rs`,
+            // which would otherwise silently overwrite it in the render map.
+            eventNode({
+                data: structTypeNode([structFieldTypeNode({ name: 'value', type: numberTypeNode('u32') })]),
+                discriminators: [constantDiscriminatorNode(settleDisc, 0)],
+                name: 'myProgramEvents',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(
+        /Naming conflict in program \[myProgram\].*event \[myProgramEvents\].*my_program_events\.rs/,
+    );
+});
+
+test('it fails fast when an event struct name collides with the aggregate event enums', () => {
+    const makeNode = (eventName: string) =>
+        programNode({
+            events: [
+                framedEvent('tradeEvent', tradeDisc),
+                eventNode({
+                    data: structTypeNode([structFieldTypeNode({ name: 'value', type: numberTypeNode('u32') })]),
+                    discriminators: [constantDiscriminatorNode(settleDisc, 0)],
+                    name: eventName as CamelCaseString,
+                }),
+            ],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+    // Glob re-exports make these only a rustc warning, so fail at generation time instead.
+    expect(() => visit(makeNode('myProgramEvent'), getRenderMapVisitor())).toThrow(
+        /Naming conflict in program \[myProgram\].*MyProgramEvent/,
+    );
+    expect(() => visit(makeNode('myProgramEventKind'), getRenderMapVisitor())).toThrow(
+        /Naming conflict in program \[myProgram\].*MyProgramEventKind/,
+    );
+});
+
+test('it fails fast on duplicate event names', () => {
+    const node = programNode({
+        events: [framedEvent('tradeEvent', tradeDisc), framedEvent('tradeEvent', settleDisc)],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(
+        /Naming conflict in program \[myProgram\].*event \[tradeEvent\]/,
+    );
+});
+
+test('it warns and excludes framing-only events from the per-event helpers', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        // Its ONLY discriminator is the shared CPI framing, which matches every framed event.
+        const bareEvent = eventNode({
+            data: hiddenPrefixTypeNode(
+                structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                [framingPrefix],
+            ),
+            discriminators: [constantDiscriminatorNode(framingPrefix, 0)],
+            framing: cpiFraming,
+            name: 'bareEvent',
+        });
+        const node = programNode({
+            events: [bareEvent, framedEvent('tradeEvent', tradeDisc)],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+        const bareEventCode = getFromRenderMap(renderMap, 'events/bare_event.rs').content;
+
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][0]).toMatch(
+            /Event \[bareEvent\] has no usable discriminator beyond the shared CPI framing/,
+        );
+
+        // The struct still renders with a doc note explaining the missing helpers,
+        // but the helpers that would match every framed event do not.
+        codeContains(bareEventCode, [
+            'pub struct BareEvent',
+            "/// This event has no usable discriminator beyond the program's shared CPI framing, so",
+        ]);
+        codeDoesNotContains(bareEventCode, ['pub fn matches', 'pub fn try_parse', 'EVENT_CPI_PREFIX']);
+    } finally {
+        warnSpy.mockRestore();
+    }
+});
+
+test('it excludes framing-only events from identify and try_parse', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        const bareEvent = eventNode({
+            data: hiddenPrefixTypeNode(
+                structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                [framingPrefix],
+            ),
+            discriminators: [constantDiscriminatorNode(framingPrefix, 0)],
+            framing: cpiFraming,
+            name: 'bareEvent',
+        });
+        const node = programNode({
+            events: [bareEvent, framedEvent('tradeEvent', tradeDisc)],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+        const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+        // BareEvent would shadow every framed event (it sorts first), so it is excluded entirely.
+        codeDoesNotContains(programEventsCode, ['BareEvent']);
+        codeContains(programEventsCode, [
+            'pub enum MyProgramEventKind',
+            'return Some(MyProgramEventKind::TradeEvent)',
+            'TradeEvent::deserialize(&mut data)',
+        ]);
+    } finally {
+        warnSpy.mockRestore();
+    }
+});
+
+test('it does not render the program events file when all events are framing-only', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        const bareEvent = eventNode({
+            data: hiddenPrefixTypeNode(
+                structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                [framingPrefix],
+            ),
+            discriminators: [constantDiscriminatorNode(framingPrefix, 0)],
+            framing: cpiFraming,
+            name: 'bareEvent',
+        });
+        const node = programNode({
+            events: [bareEvent],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+        expect(renderMap.has('events/my_program_events.rs')).toBe(false);
+    } finally {
+        warnSpy.mockRestore();
+    }
 });
 
 test('it warns and hoists only the first framing when events have conflicting sharedConstantName', () => {
@@ -1405,4 +1651,141 @@ test('it warns and hoists only the first framing when events have conflicting sh
     } finally {
         warnSpy.mockRestore();
     }
+});
+
+test('it includes field discriminator checks in matches, identically to identify', () => {
+    // CPI-framed event whose only post-framing discriminator is a field discriminator:
+    // matches() must check the field bytes, not just the shared framing.
+    const fieldEvent = eventNode({
+        data: hiddenPrefixTypeNode(
+            structTypeNode([
+                structFieldTypeNode({
+                    defaultValue: numberValueNode(3),
+                    name: 'eventType',
+                    type: numberTypeNode('u8'),
+                }),
+                structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') }),
+            ]),
+            [framingPrefix],
+        ),
+        discriminators: [constantDiscriminatorNode(framingPrefix, 0), fieldDiscriminatorNode('eventType', 8)],
+        framing: cpiFraming,
+        name: 'fieldEvent',
+    });
+    const node = programNode({
+        events: [fieldEvent, framedEvent('tradeEvent', tradeDisc)],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const fieldEventCode = getFromRenderMap(renderMap, 'events/field_event.rs').content;
+    const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(fieldEventCode, [
+        'pub const FIELD_EVENT_EVENT_TYPE: u8 = 3;',
+        // matches checks the framing AND the field discriminator bytes.
+        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..]) && data.get(8..9) == Some(&FIELD_EVENT_EVENT_TYPE.to_le_bytes())',
+        // The field is part of the body, so only the framing prefix is skipped.
+        'let mut data = &data[8..];',
+    ]);
+    // identify uses the exact same field check inside the hoisted framing block.
+    codeContains(programEventsCode, [
+        'use crate::generated::events::FIELD_EVENT_EVENT_TYPE;',
+        'data.get(8..9) == Some(&FIELD_EVENT_EVENT_TYPE.to_le_bytes())',
+        'return Some(MyProgramEventKind::FieldEvent)',
+    ]);
+});
+
+test('it excludes framed events whose field discriminator has no default value everywhere', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        // The field discriminator has no defaultValue, so no byte check can be derived:
+        // without one, matches() would match every framed event of the program.
+        const noDefaultEvent = eventNode({
+            data: hiddenPrefixTypeNode(
+                structTypeNode([
+                    structFieldTypeNode({ name: 'eventType', type: numberTypeNode('u8') }),
+                    structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') }),
+                ]),
+                [framingPrefix],
+            ),
+            discriminators: [constantDiscriminatorNode(framingPrefix, 0), fieldDiscriminatorNode('eventType', 8)],
+            framing: cpiFraming,
+            name: 'noDefaultEvent',
+        });
+        const node = programNode({
+            events: [noDefaultEvent],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+        const eventCode = getFromRenderMap(renderMap, 'events/no_default_event.rs').content;
+
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(warnSpy.mock.calls[0][0]).toMatch(
+            /Event \[noDefaultEvent\] has no usable discriminator beyond the shared CPI framing/,
+        );
+
+        // No helpers and no import of the framing constant: the aggregate file
+        // that would declare it is never rendered.
+        codeDoesNotContains(eventCode, ['pub fn matches', 'pub fn try_parse', 'EVENT_CPI_PREFIX']);
+        expect(renderMap.has('events/my_program_events.rs')).toBe(false);
+    } finally {
+        warnSpy.mockRestore();
+    }
+});
+
+test('it skips the full hidden prefix even when discriminators do not cover it', () => {
+    // The hidden prefix carries a third constant that no discriminator references: the
+    // body starts after the whole prefix (8 + 8 + 4), not the discriminators' 16 bytes.
+    const extraConst = constantValueNode(fixedSizeTypeNode(bytesTypeNode(), 4), bytesValueNode('base16', 'deadbeef'));
+    const node = programNode({
+        events: [
+            eventNode({
+                data: hiddenPrefixTypeNode(
+                    structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                    [framingPrefix, tradeDisc, extraConst],
+                ),
+                discriminators: [constantDiscriminatorNode(framingPrefix, 0), constantDiscriminatorNode(tradeDisc, 8)],
+                framing: cpiFraming,
+                name: 'paddedEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const eventCode = getFromRenderMap(renderMap, 'events/padded_event.rs').content;
+    const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(eventCode, [
+        '// EVENT_CPI_PREFIX (8) + PADDED_EVENT_DISCRIMINATOR (8) + hidden prefix entry (4)',
+        'let mut data = &data[20..];',
+    ]);
+    codeContains(programEventsCode, ['let mut data = &data[20..];']);
+});
+
+test('it documents the transpose hint and the program-level filter_map example', () => {
+    const node = programNode({
+        events: [framedEvent('tradeEvent', tradeDisc)],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const tradeEventCode = getFromRenderMap(renderMap, 'events/trade_event.rs').content;
+    const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    // Per-event docs carry the transpose hint but no code example.
+    codeContains(tradeEventCode, ['/// Use [`Option::transpose`] to propagate the failure with `?`.']);
+    codeDoesNotContains(tradeEventCode, ['```ignore']);
+    codeContains(programEventsCode, [
+        'Use [`Option::transpose`] to',
+        '/// let events: Vec<MyProgramEvent> = datas',
+        '///     .filter_map(|data| try_parse_my_program_event(data))',
+        '///     .collect::<Result<_, _>>()?;',
+    ]);
 });

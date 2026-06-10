@@ -4,6 +4,7 @@ import {
     ConstantValueNode,
     constantValueNode,
     definedTypeNode,
+    type DiscriminatorNode,
     EventFraming,
     EventNode,
     getAllAccounts,
@@ -48,7 +49,7 @@ import {
     CargoDependencies,
     computePdaAddress,
     constantDiscriminatorName,
-    constantDiscriminatorSize,
+    constantValueSize,
     Fragment,
     getByteArrayDiscriminatorConstantName,
     getDiscriminatorConditions,
@@ -56,6 +57,7 @@ import {
     getImportFromFactory,
     type GetImportFromFunction,
     getTraitsFromNodeFactory,
+    getUnconditionalDerivesFromNode,
     LinkOverrides,
     render,
     renderByteCheck,
@@ -223,69 +225,66 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         typeManifestVisitor,
                     });
 
-                    const hasFromBytes = eventHasFromBytes(node);
-                    const perEventConstantDiscriminators = hasFromBytes
-                        ? discriminators
-                              .filter(isNodeFilter('constantDiscriminatorNode'))
-                              .map(d => {
-                                  const name = snakeCase(
-                                      constantDiscriminatorName(node.name, d, discriminators),
-                                  ).toUpperCase();
-                                  return {
-                                      condition: renderByteCheck(name, d.constant.type, d.offset, true),
-                                      message: 'invalid event discriminator',
-                                      name,
-                                      offset: d.offset,
-                                      size: constantDiscriminatorSize(d),
-                                  };
-                              })
-                              .sort((a, b) => a.offset - b.offset)
-                        : [];
+                    // Derived exactly like the program-level identify conditions so the two can
+                    // never disagree. The constants live in this file, so no imports are collected.
+                    const { conditions: perEventConditions } = getDiscriminatorConditions({
+                        discriminatorNodes: discriminators,
+                        fields,
+                        getImportFrom,
+                        importPrefix: null,
+                        prefix: node.name,
+                        typeManifestVisitor,
+                    });
 
-                    const allConstantDiscriminators =
+                    // A framed event with no usable discriminator beyond the shared framing
+                    // cannot be told apart from other framed events, so its helpers are skipped.
+                    const isIdentifiable = !isCpiFramed || perEventConditions.length > 0;
+                    if (!isIdentifiable) {
+                        logWarn(
+                            `[Rust] Event [${node.name}] has no usable discriminator beyond the shared CPI ` +
+                                `framing, which is common to all framed events and cannot identify it. Its ` +
+                                `matches and try_parse helpers will be skipped and it will be excluded from ` +
+                                `the program's identify/try_parse event helpers. Add a constant or field ` +
+                                `discriminator (with a default value) after the framing prefix to make it ` +
+                                `identifiable.`,
+                        );
+                    }
+                    const hasParseHelpers = eventHasParseHelpers(node) && isIdentifiable;
+
+                    const matchesParts =
                         isCpiFramed && framingConstantName
                             ? [
-                                  {
-                                      condition: renderByteCheck(
-                                          framingConstantName,
-                                          programEventFraming!.constant.type,
-                                          0,
-                                          true,
-                                      ),
-                                      message: 'invalid event CPI framing',
-                                      name: framingConstantName,
-                                      offset: 0,
-                                      size: renderConstantBytesArray(programEventFraming!.constant)?.len ?? null,
-                                  },
-                                  ...perEventConstantDiscriminators,
+                                  renderByteCheck(framingConstantName, programEventFraming!.constant.type, 0),
+                                  ...perEventConditions,
                               ]
-                            : perEventConstantDiscriminators;
+                            : perEventConditions;
 
-                    const hiddenPrefixSkipResult = hasFromBytes
+                    const hiddenPrefixSkipResult = hasParseHelpers
                         ? isCpiFramed
-                            ? getCpiFramedSkip(allConstantDiscriminators)
+                            ? getCpiFramedSkip(node, getFramedSkipConstants(node, discriminators, programEventFraming!))
                             : getHiddenPrefixSkip(node)
                         : null;
-                    const generateFromBytes = hasFromBytes && hiddenPrefixSkipResult !== null;
+                    const generateParseHelpers = hasParseHelpers && hiddenPrefixSkipResult !== null;
                     const hiddenPrefixSkip = hiddenPrefixSkipResult ?? NO_SKIP;
-                    const constantDiscriminators = generateFromBytes ? allConstantDiscriminators : [];
 
                     const imports = new ImportMap()
                         .mergeWithManifest(typeManifest)
                         .mergeWith(discriminatorConstants.imports)
                         .remove(`generatedEvents::${pascalCase(node.name)}`);
-                    if (framingConstantName) {
+                    if (framingConstantName && generateParseHelpers) {
                         imports.add(`generatedEvents::${framingConstantName}`);
                     }
 
                     return createRenderMap(`events/${snakeCase(node.name)}.rs`, {
                         content: render('eventsPage.njk', {
-                            constantDiscriminators,
                             discriminatorConstants: discriminatorConstants.render,
                             event: node,
                             hiddenPrefixSkip,
                             imports: imports.toString(dependencyMap),
+                            matchesCondition: matchesParts.join(' && '),
+                            parseHelpers: generateParseHelpers,
                             typeManifest,
+                            unidentifiable: !isIdentifiable,
                         }),
                         imports,
                     });
@@ -584,6 +583,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         getImportFrom,
                         typeManifestVisitor,
                         dependencyMap,
+                        options.traitOptions,
                     );
                     if (programEventsRender) {
                         programsWithEventEnum.add(node.name);
@@ -675,7 +675,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
     );
 }
 
-function eventHasFromBytes(event: EventNode): boolean {
+function eventHasParseHelpers(event: EventNode): boolean {
     const hasConstantDiscriminator = (event.discriminators ?? []).some(d => isNode(d, 'constantDiscriminatorNode'));
     const dataHasHiddenPrefix = isNode(event.data, 'hiddenPrefixTypeNode');
     return hasConstantDiscriminator && dataHasHiddenPrefix;
@@ -695,7 +695,7 @@ function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
         if (!isNode(p.type, 'fixedSizeTypeNode')) {
             logWarn(
                 `[Rust] Event [${event.name}] has a non-fixed-size hidden prefix entry; ` +
-                    `from_bytes will not be generated.`,
+                    `try_parse will not be generated.`,
             );
             hasNonFixedSize = true;
             return sum;
@@ -743,18 +743,64 @@ function isEventCpiFramed(event: EventNode, programEventFraming: ResolvedProgram
     return event.data.prefix.length > 0;
 }
 
-function getCpiFramedSkip(constantDiscriminators: { name: string; offset: number; size: number | null }[]): SkipExpr {
-    // Fold known sizes into one leading literal range and chain `[X.len()..]` for the rest,
-    // so generated code never emits `+` (clippy::arithmetic_side_effects).
-    const knownSize = constantDiscriminators.reduce((sum, d) => sum + (d.size ?? 0), 0);
-    const ranges = constantDiscriminators.filter(d => d.size === null).map(d => `[${d.name}.len()..]`);
+/**
+ * The named constants a framed event's hidden-prefix entries can be matched against:
+ * the program's hoisted framing constant plus the event's own constant discriminators.
+ */
+function getFramedSkipConstants(
+    event: EventNode,
+    strippedDiscriminators: DiscriminatorNode[],
+    programEventFraming: ResolvedProgramEventFraming,
+): { constant: ConstantValueNode; name: string }[] {
+    return [
+        {
+            constant: programEventFraming.constant,
+            name: snakeCase(programEventFraming.framing.sharedConstantName).toUpperCase(),
+        },
+        ...strippedDiscriminators.filter(isNodeFilter('constantDiscriminatorNode')).map(d => ({
+            constant: d.constant,
+            name: snakeCase(constantDiscriminatorName(event.name, d, strippedDiscriminators)).toUpperCase(),
+        })),
+    ];
+}
+
+/**
+ * Skip expression past a CPI-framed event's full hidden prefix, emitted without `+` (clippy):
+ * known sizes fold into one literal range, the rest chain `[CONST.len()..]`; null when neither applies.
+ */
+function getCpiFramedSkip(
+    event: EventNode,
+    namedConstants: { constant: ConstantValueNode; name: string }[],
+): SkipExpr | null {
+    if (!isNode(event.data, 'hiddenPrefixTypeNode')) {
+        return NO_SKIP;
+    }
+    let knownSize = 0;
+    const ranges: string[] = [];
+    const commentParts: string[] = [];
+    for (const entry of event.data.prefix) {
+        const size = constantValueSize(entry);
+        const named = namedConstants.find(
+            c => c.constant === entry || JSON.stringify(c.constant) === JSON.stringify(entry),
+        );
+        if (size !== null) {
+            knownSize += size;
+            commentParts.push(named ? `${named.name} (${size})` : `hidden prefix entry (${size})`);
+        } else if (named) {
+            ranges.push(`[${named.name}.len()..]`);
+            commentParts.push(named.name);
+        } else {
+            logWarn(
+                `[Rust] Event [${event.name}] has a hidden prefix entry with an unknown size and no ` +
+                    `matching discriminator constant; try_parse will not be generated.`,
+            );
+            return null;
+        }
+    }
     if (knownSize > 0 || ranges.length === 0) {
         ranges.unshift(`[${knownSize}..]`);
     }
-    const comment =
-        constantDiscriminators.length > 1
-            ? constantDiscriminators.map(d => (d.size === null ? d.name : `${d.name} (${d.size})`)).join(' + ')
-            : null;
+    const comment = event.data.prefix.length > 1 ? commentParts.join(' + ') : null;
     return { comment, expr: `&data${ranges.join('')}` };
 }
 
@@ -774,6 +820,10 @@ function renderConstantBytesArray(constant: ConstantValueNode): { len: number; l
     return { len: size, literal: `[${bytes.join(', ')}]` };
 }
 
+/**
+ * Builds the program-level aggregate events page: the `*EventKind`/`*Event` enums plus the
+ * `identify_*_event`/`try_parse_*_event` helpers. Null when no event is identifiable.
+ */
 function buildProgramEventsRender(
     events: EventNode[],
     programNode: ProgramNode,
@@ -781,10 +831,12 @@ function buildProgramEventsRender(
     getImportFrom: GetImportFromFunction,
     typeManifestVisitor: ReturnType<typeof getTypeManifestVisitor>,
     dependencyMap: Record<string, string>,
+    traitOptions: TraitOptions | undefined,
 ): { content: string; imports: ImportMap } | null {
     if (events.length === 0) {
         return null;
     }
+    assertNoDuplicateEventFiles(events, programNode);
 
     const imports = new ImportMap();
     const framingConstantName = programEventFraming
@@ -809,70 +861,143 @@ function buildProgramEventsRender(
                 prefix: event.name,
                 typeManifestVisitor,
             });
-            const perEventConstantDiscs = perEventDiscriminators
-                .filter(isNodeFilter('constantDiscriminatorNode'))
-                .map(d => ({
-                    name: snakeCase(constantDiscriminatorName(event.name, d, perEventDiscriminators)).toUpperCase(),
-                    offset: d.offset,
-                    size: constantDiscriminatorSize(d),
-                }));
-
-            let conditions: string[];
-            let hiddenPrefixSkipResult: SkipExpr | null;
-            if (isCpiFramed && framingConstantName) {
-                conditions = [
-                    renderByteCheck(framingConstantName, programEventFraming!.constant.type, 0),
-                    ...perEventConditions,
-                ];
-                const allConstantDiscs = [
-                    {
-                        name: framingConstantName,
-                        offset: 0,
-                        size: renderConstantBytesArray(programEventFraming!.constant)?.len ?? null,
-                    },
-                    ...perEventConstantDiscs,
-                ];
-                hiddenPrefixSkipResult = getCpiFramedSkip(allConstantDiscs);
-            } else {
-                conditions = perEventConditions;
-                hiddenPrefixSkipResult = isNode(event.data, 'hiddenPrefixTypeNode')
-                    ? getHiddenPrefixSkip(event)
-                    : NO_SKIP;
+            // Framing-only: the shared framing matches every framed event and cannot
+            // identify this one. The per-event page already warned.
+            if (isCpiFramed && perEventConditions.length === 0) {
+                return [];
             }
 
-            if (hiddenPrefixSkipResult === null || conditions.length === 0) {
+            if (isCpiFramed && framingConstantName) {
+                const hiddenPrefixSkip = getCpiFramedSkip(
+                    event,
+                    getFramedSkipConstants(event, perEventDiscriminators, programEventFraming!),
+                );
+                if (hiddenPrefixSkip === null) {
+                    return [];
+                }
+                // Inside identify's hoisted framing block, the arm checks only the event's
+                // own discriminators: the shared framing is compared once for all arms.
+                imports.mergeWith(condImports);
+                return [
+                    {
+                        ...event,
+                        condition: perEventConditions.join(' && '),
+                        framed: true,
+                        hiddenPrefixSkip,
+                    },
+                ];
+            }
+
+            const hiddenPrefixSkipResult = isNode(event.data, 'hiddenPrefixTypeNode')
+                ? getHiddenPrefixSkip(event)
+                : NO_SKIP;
+            if (hiddenPrefixSkipResult === null || perEventConditions.length === 0) {
                 return [];
             }
 
             imports.mergeWith(condImports);
-            return [{ ...event, conditions, hiddenPrefixSkip: hiddenPrefixSkipResult }];
+            return [
+                {
+                    ...event,
+                    condition: perEventConditions.join(' && '),
+                    framed: false,
+                    hiddenPrefixSkip: hiddenPrefixSkipResult,
+                },
+            ];
         });
 
     if (eventsWithDiscriminators.length === 0) {
         return null;
     }
+    assertNoAggregateNameCollisions(events, programNode);
 
     imports.add('borsh::BorshDeserialize');
     eventsWithDiscriminators.forEach(event => {
         imports.add(`generatedEvents::${pascalCase(event.name)}`);
     });
 
-    const anyCpiFramed = eventsWithDiscriminators.some(event => isEventCpiFramed(event, programEventFraming));
+    // The aggregate enum can only derive `Eq` when every variant's struct derives it,
+    // resolved through the same trait options the per-event pages use.
+    const eventEnumEq = eventsWithDiscriminators.every(event =>
+        getUnconditionalDerivesFromNode(
+            definedTypeNode({ docs: event.docs, name: event.name, type: resolveNestedTypeNode(event.data) }),
+            traitOptions,
+        ).includes('Eq'),
+    );
+
+    const framedEvents = eventsWithDiscriminators.filter(event => event.framed);
+    const unframedEvents = eventsWithDiscriminators.filter(event => !event.framed);
+    const anyCpiFramed = framedEvents.length > 0;
     const eventFramingBytes =
         anyCpiFramed && programEventFraming !== undefined
             ? renderConstantBytesArray(programEventFraming.constant)
             : null;
+    const framingCheck =
+        anyCpiFramed && framingConstantName && programEventFraming
+            ? renderByteCheck(framingConstantName, programEventFraming.constant.type, 0)
+            : null;
 
     return {
         content: render('programEventsPage.njk', {
+            eventEnumEq,
             eventFramingBytes,
             eventFramingName: anyCpiFramed ? framingConstantName : null,
             eventsWithDiscriminators,
+            framedEvents,
+            framingCheck,
             imports: imports.toString(dependencyMap),
             program: programNode,
+            unframedEvents,
         }),
         imports,
     };
+}
+
+/**
+ * Fails fast when two events render to the same file: the render map would
+ * silently keep only the last one.
+ */
+function assertNoDuplicateEventFiles(events: EventNode[], programNode: ProgramNode): void {
+    const owners = new Map<string, EventNode>();
+    for (const event of events) {
+        const file = snakeCase(event.name);
+        const existing = owners.get(file);
+        if (existing) {
+            throw new Error(
+                `[Rust] Naming conflict in program [${programNode.name}]: event [${event.name}] renders ` +
+                    `the file [events/${file}.rs], which collides with event [${existing.name}]. ` +
+                    `Rename one of the events so the generated names differ.`,
+            );
+        }
+        owners.set(file, event);
+    }
+}
+
+/**
+ * Fails fast when an event collides with the program's aggregate events file or enums.
+ * The file collision silently overwrites in the render map; the enum collisions cross
+ * glob re-exports, where rustc only warns until a consumer uses the ambiguous name.
+ */
+function assertNoAggregateNameCollisions(events: EventNode[], programNode: ProgramNode): void {
+    const aggregateFile = `${snakeCase(programNode.name)}_events`;
+    const aggregateEnums = [`${pascalCase(programNode.name)}Event`, `${pascalCase(programNode.name)}EventKind`];
+    for (const event of events) {
+        if (snakeCase(event.name) === aggregateFile) {
+            throw new Error(
+                `[Rust] Naming conflict in program [${programNode.name}]: event [${event.name}] renders ` +
+                    `the file [events/${aggregateFile}.rs], which collides with the program's aggregate ` +
+                    `events file. Rename the event so the generated names differ.`,
+            );
+        }
+        const struct = pascalCase(event.name);
+        if (aggregateEnums.includes(struct)) {
+            throw new Error(
+                `[Rust] Naming conflict in program [${programNode.name}]: event [${event.name}] generates ` +
+                    `the struct [${struct}], which collides with the program's aggregate event enum ` +
+                    `[${struct}]. Rename the event so the generated names differ.`,
+            );
+        }
+    }
 }
 
 /**

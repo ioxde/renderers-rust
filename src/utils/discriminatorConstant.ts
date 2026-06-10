@@ -1,6 +1,7 @@
 import {
     camelCase,
     ConstantDiscriminatorNode,
+    ConstantValueNode,
     DiscriminatorNode,
     FieldDiscriminatorNode,
     InstructionArgumentNode,
@@ -147,11 +148,15 @@ function fieldDiscriminatorName(prefix: string, fieldName: string): string {
     return camelCase(`${prefix}_${fieldName}`);
 }
 
+/**
+ * Renders the byte-check conditions for a list of discriminators. A null `importPrefix`
+ * means the constants are declared in the rendering file, so no imports are collected.
+ */
 export function getDiscriminatorConditions(scope: {
     discriminatorNodes: DiscriminatorNode[];
     fields: InstructionArgumentNode[] | StructFieldTypeNode[];
     getImportFrom: GetImportFromFunction;
-    importPrefix: string;
+    importPrefix: string | null;
     prefix: string;
     typeManifestVisitor: ReturnType<typeof getTypeManifestVisitor>;
 }): { conditions: string[]; imports: ImportMap } {
@@ -168,7 +173,7 @@ function getDiscriminatorCondition(
         discriminatorNodes: DiscriminatorNode[];
         fields: InstructionArgumentNode[] | StructFieldTypeNode[];
         getImportFrom: GetImportFromFunction;
-        importPrefix: string;
+        importPrefix: string | null;
         prefix: string;
         typeManifestVisitor: ReturnType<typeof getTypeManifestVisitor>;
     },
@@ -194,42 +199,48 @@ function getConstantCondition(
     discriminatorNode: ConstantDiscriminatorNode,
     scope: {
         discriminatorNodes: DiscriminatorNode[];
-        importPrefix: string;
+        importPrefix: string | null;
         prefix: string;
     },
     imports: ImportMap,
 ): string {
     const { discriminatorNodes, importPrefix, prefix } = scope;
     const constName = snakeCase(constantDiscriminatorName(prefix, discriminatorNode, discriminatorNodes)).toUpperCase();
-    imports.add(`${importPrefix}::${constName}`);
+    if (importPrefix !== null) {
+        imports.add(`${importPrefix}::${constName}`);
+    }
 
     return renderByteCheck(constName, discriminatorNode.constant.type, discriminatorNode.offset);
 }
 
 /**
- * Renders a `data` vs discriminator constant check; `negate` inverts it for guards. Scalar number
- * consts compare via `to_le/be_bytes`; ranges are precomputed literals (clippy::arithmetic_side_effects).
+ * Renders a `data` vs discriminator constant check. Scalar number consts compare via
+ * `to_le/be_bytes`; ranges are precomputed literals (clippy::arithmetic_side_effects).
  */
-export function renderByteCheck(name: string, type: TypeNode, offset: number, negate = false): string {
-    const eq = negate ? '!=' : '==';
+export function renderByteCheck(name: string, type: TypeNode, offset: number): string {
     if (isNode(type, 'numberTypeNode')) {
         const byteSize = getNumberByteSize(type.format);
         const range = offset === 0 ? `..${byteSize}` : `${offset}..${offset + byteSize}`;
-        return `data.get(${range}) ${eq} Some(&${name}.${numberBytesFn(type)}())`;
+        return `data.get(${range}) == Some(&${name}.${numberBytesFn(type)}())`;
     }
     if (offset === 0) {
-        return `data.get(..${name}.len()) ${eq} Some(&${name}[..])`;
+        return `data.get(..${name}.len()) == Some(&${name}[..])`;
     }
     const size = staticByteSize(type);
     if (size !== null) {
-        return `data.get(${offset}..${offset + size}) ${eq} Some(&${name}[..])`;
+        return `data.get(${offset}..${offset + size}) == Some(&${name}[..])`;
     }
-    return `${negate ? '!' : ''}data.get(${offset}..).is_some_and(|tail| tail.starts_with(&${name}[..]))`;
+    return `data.get(${offset}..).is_some_and(|tail| tail.starts_with(&${name}[..]))`;
 }
 
 /** Byte size of a constant discriminator, when statically known. */
 export function constantDiscriminatorSize(discriminatorNode: ConstantDiscriminatorNode): number | null {
-    const type = discriminatorNode.constant.type;
+    return constantValueSize(discriminatorNode.constant);
+}
+
+/** Byte size of a constant value, when statically known. */
+export function constantValueSize(constant: ConstantValueNode): number | null {
+    const type = constant.type;
     if (isNode(type, 'numberTypeNode')) {
         return NUMBER_BYTE_SIZES[type.format] ?? null;
     }
@@ -263,7 +274,7 @@ function getFieldCondition(
     discriminatorNode: FieldDiscriminatorNode,
     scope: {
         fields: InstructionArgumentNode[] | StructFieldTypeNode[];
-        importPrefix: string;
+        importPrefix: string | null;
         prefix: string;
     },
     imports: ImportMap,
@@ -275,7 +286,9 @@ function getFieldCondition(
     }
 
     const constName = snakeCase(fieldDiscriminatorName(prefix, discriminatorNode.name)).toUpperCase();
-    imports.add(`${importPrefix}::${constName}`);
+    if (importPrefix !== null) {
+        imports.add(`${importPrefix}::${constName}`);
+    }
     return renderByteCheck(constName, field.type, discriminatorNode.offset);
 }
 

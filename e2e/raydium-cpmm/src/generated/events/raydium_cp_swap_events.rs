@@ -30,13 +30,23 @@ pub fn identify_raydium_cp_swap_event(data: &[u8]) -> Option<RaydiumCpSwapEventK
 }
 
 /// Parsed event variants for the `raydium_cp_swap` program.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RaydiumCpSwapEvent {
     LpChangeEvent(LpChangeEvent),
     SwapEvent(SwapEvent),
 }
 
 /// Tries to parse a `raydium_cp_swap` event from the provided data.
+///
+/// Returns `None` when no event matches; `Some(Err(_))` when one matches but fails to
+/// deserialize. Use [`Option::transpose`] to propagate failures with `?`, or scan a batch:
+///
+/// ```ignore
+/// let events: Vec<RaydiumCpSwapEvent> = datas
+///     .iter()
+///     .filter_map(|data| try_parse_raydium_cp_swap_event(data))
+///     .collect::<Result<_, _>>()?;
+/// ```
 pub fn try_parse_raydium_cp_swap_event(
     data: &[u8],
 ) -> Option<Result<RaydiumCpSwapEvent, std::io::Error>> {

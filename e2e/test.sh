@@ -9,9 +9,9 @@ function test_project() {
 }
 
 function test_anchor_project() {
-    ./e2e/generate-anchor.cjs $1 
+    ./e2e/generate-anchor.cjs $1
     cd e2e/$1
-    cargo check --all-features
+    cargo test --all-features
     cd ../..
 }
 

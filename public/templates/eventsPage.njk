@@ -5,6 +5,10 @@
 
 {{ imports }}
 
+{% if unidentifiable %}
+/// This event has no usable discriminator beyond the program's shared CPI framing, so
+/// `matches`/`try_parse` are not generated and the program-level helpers skip it.
+{% endif %}
 {{ macros.docblock(event.docs) }}
 {{- typeManifest.type }}
 
@@ -14,23 +18,26 @@
 
 {{ discriminatorConstants }}
 
-{% if constantDiscriminators.length > 0 %}
+{% if parseHelpers %}
 impl {{ event.name | pascalCase }} {
   #[inline(always)]
-  pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-{% for disc in constantDiscriminators %}
-    if {{ disc.condition }} {
-      return Err(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "{{ disc.message }}",
-      ));
+  pub fn matches(data: &[u8]) -> bool {
+    {{ matchesCondition }}
+  }
+
+  /// Returns `None` when the data does not match this event's discriminator
+  /// bytes; `Some(Err(_))` when it matches but the body fails to deserialize.
+  /// Use [`Option::transpose`] to propagate the failure with `?`.
+  #[inline(always)]
+  pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>> {
+    if !Self::matches(data) {
+      return None;
     }
-{% endfor %}
 {% if hiddenPrefixSkip.comment %}
     // {{ hiddenPrefixSkip.comment }}
 {% endif %}
     let mut data = {{ hiddenPrefixSkip.expr }};
-    Self::deserialize(&mut data)
+    Some(Self::deserialize(&mut data))
   }
 }
 {% endif %}

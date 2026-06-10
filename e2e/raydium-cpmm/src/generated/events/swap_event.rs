@@ -29,14 +29,19 @@ pub const SWAP_EVENT_DISCRIMINATOR: [u8; 8] = [64, 198, 205, 232, 38, 8, 113, 22
 
 impl SwapEvent {
     #[inline(always)]
-    pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-        if data.get(..SWAP_EVENT_DISCRIMINATOR.len()) != Some(&SWAP_EVENT_DISCRIMINATOR[..]) {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "invalid event discriminator",
-            ));
+    pub fn matches(data: &[u8]) -> bool {
+        data.get(..SWAP_EVENT_DISCRIMINATOR.len()) == Some(&SWAP_EVENT_DISCRIMINATOR[..])
+    }
+
+    /// Returns `None` when the data does not match this event's discriminator
+    /// bytes; `Some(Err(_))` when it matches but the body fails to deserialize.
+    /// Use [`Option::transpose`] to propagate the failure with `?`.
+    #[inline(always)]
+    pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>> {
+        if !Self::matches(data) {
+            return None;
         }
         let mut data = &data[8..];
-        Self::deserialize(&mut data)
+        Some(Self::deserialize(&mut data))
     }
 }

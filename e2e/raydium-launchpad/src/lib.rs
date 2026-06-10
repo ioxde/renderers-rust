@@ -104,3 +104,92 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod event_tests {
+    use crate::generated::events::*;
+    use solana_address::Address;
+
+    fn framed(discriminator: [u8; 8], body: &[u8]) -> Vec<u8> {
+        let mut data = ANCHOR_EVENT_CPI_DISCRIMINATOR.to_vec();
+        data.extend_from_slice(&discriminator);
+        data.extend_from_slice(body);
+        data
+    }
+
+    fn claim_vested_event() -> ClaimVestedEvent {
+        ClaimVestedEvent {
+            pool_state: Address::new_from_array([1; 32]),
+            beneficiary: Address::new_from_array([2; 32]),
+            claim_amount: 42,
+        }
+    }
+
+    #[test]
+    fn try_parse_decodes_a_matching_event() {
+        let event = claim_vested_event();
+        let data = framed(
+            CLAIM_VESTED_EVENT_DISCRIMINATOR,
+            &borsh::to_vec(&event).unwrap(),
+        );
+
+        assert!(ClaimVestedEvent::matches(&data));
+        assert_eq!(ClaimVestedEvent::try_parse(&data).unwrap().unwrap(), event);
+    }
+
+    #[test]
+    fn try_parse_returns_none_for_another_event_of_the_same_program() {
+        let event = claim_vested_event();
+        let data = framed(
+            CLAIM_VESTED_EVENT_DISCRIMINATOR,
+            &borsh::to_vec(&event).unwrap(),
+        );
+
+        assert!(!TradeEvent::matches(&data));
+        assert!(TradeEvent::try_parse(&data).is_none());
+    }
+
+    #[test]
+    fn try_parse_returns_none_for_foreign_framed_data() {
+        // Valid CPI framing, but a discriminator unknown to this program.
+        let data = framed([0xff; 8], &[1, 2, 3]);
+
+        assert!(ClaimVestedEvent::try_parse(&data).is_none());
+        assert!(identify_raydium_launchpad_event(&data).is_none());
+        assert!(try_parse_raydium_launchpad_event(&data).is_none());
+    }
+
+    #[test]
+    fn try_parse_surfaces_an_error_for_a_truncated_body() {
+        // The discriminator matches, so the failure to deserialize is a real error.
+        let data = framed(CLAIM_VESTED_EVENT_DISCRIMINATOR, &[1, 2, 3]);
+
+        assert!(ClaimVestedEvent::matches(&data));
+        assert!(ClaimVestedEvent::try_parse(&data).unwrap().is_err());
+        assert!(try_parse_raydium_launchpad_event(&data).unwrap().is_err());
+    }
+
+    #[test]
+    fn identify_and_try_parse_dispatch_program_events() {
+        let event = claim_vested_event();
+        let data = framed(
+            CLAIM_VESTED_EVENT_DISCRIMINATOR,
+            &borsh::to_vec(&event).unwrap(),
+        );
+
+        assert_eq!(
+            identify_raydium_launchpad_event(&data),
+            Some(RaydiumLaunchpadEventKind::ClaimVestedEvent)
+        );
+        assert_eq!(
+            try_parse_raydium_launchpad_event(&data).unwrap().unwrap(),
+            RaydiumLaunchpadEvent::ClaimVestedEvent(event)
+        );
+    }
+
+    #[test]
+    fn identify_returns_none_for_unframed_data() {
+        assert!(identify_raydium_launchpad_event(&[0u8; 32]).is_none());
+        assert!(identify_raydium_launchpad_event(&[]).is_none());
+    }
+}

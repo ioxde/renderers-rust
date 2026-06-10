@@ -69,12 +69,7 @@ export function getTraitsFromNode(
         return { imports: new ImportMap(), render: '' };
     }
 
-    // Find all the FQN traits for the node.
-    const sanitizedOverrides = Object.fromEntries(
-        Object.entries(options.overrides).map(([key, value]) => [camelCase(key), value]),
-    );
-    const nodeOverrides: string[] | undefined = sanitizedOverrides[node.name];
-    const allTraits = nodeOverrides === undefined ? getDefaultTraits(nodeType, options) : nodeOverrides;
+    const allTraits = resolveAllTraits(node, nodeType, options);
 
     // Wrap the traits in feature flags if necessary.
     const partitionedTraits = partitionTraitsInFeatures(allTraits, options.featureFlags);
@@ -107,6 +102,43 @@ export function getTraitsFromNode(
     }
 
     return { imports, render: traitLines.join('') };
+}
+
+/**
+ * Resolves the traits a node renders in its plain `#[derive(...)]` attribute, excluding
+ * feature-flagged ones, with fully qualified paths reduced to bare trait names.
+ */
+export function getUnconditionalDerivesFromNode(
+    node: AccountNode | DefinedTypeNode | InstructionNode,
+    userOptions: TraitOptions = {},
+): string[] {
+    assertIsNode(node, ['accountNode', 'definedTypeNode', 'instructionNode']);
+    const options: Required<TraitOptions> = { ...DEFAULT_TRAIT_OPTIONS, ...userOptions };
+
+    const nodeType = getNodeType(node);
+    if (nodeType === 'alias') {
+        return [];
+    }
+
+    const allTraits = resolveAllTraits(node, nodeType, options);
+    const [unfeaturedTraits] = partitionTraitsInFeatures(allTraits, options.featureFlags);
+    return unfeaturedTraits.map(trait => {
+        const index = trait.lastIndexOf('::');
+        return index === -1 ? trait : trait.slice(index + 2);
+    });
+}
+
+/** Resolves the full trait list for a node, applying per-type overrides. */
+function resolveAllTraits(
+    node: AccountNode | DefinedTypeNode | InstructionNode,
+    nodeType: 'dataEnum' | 'scalarEnum' | 'struct',
+    options: Required<TraitOptions>,
+): string[] {
+    const sanitizedOverrides = Object.fromEntries(
+        Object.entries(options.overrides).map(([key, value]) => [camelCase(key), value]),
+    );
+    const nodeOverrides: string[] | undefined = sanitizedOverrides[node.name];
+    return nodeOverrides === undefined ? getDefaultTraits(nodeType, options) : nodeOverrides;
 }
 
 function getNodeType(
@@ -242,12 +274,7 @@ export function getSerdeFieldAttribute(
         return '';
     }
 
-    // Find all the traits for the node.
-    const sanitizedOverrides = Object.fromEntries(
-        Object.entries(options.overrides).map(([key, value]) => [camelCase(key), value]),
-    );
-    const nodeOverrides: string[] | undefined = sanitizedOverrides[node.name];
-    const allTraits = nodeOverrides === undefined ? getDefaultTraits(nodeType, options) : nodeOverrides;
+    const allTraits = resolveAllTraits(node, nodeType, options);
 
     const { featureName, hasSerde } = findSerdeFeature(allTraits, options.featureFlags);
     if (!hasSerde) {
