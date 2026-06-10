@@ -233,6 +233,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                                   ).toUpperCase();
                                   return {
                                       condition: renderByteCheck(name, d.constant.type, d.offset, true),
+                                      message: 'invalid event discriminator',
                                       name,
                                       offset: d.offset,
                                       size: constantDiscriminatorSize(d),
@@ -251,6 +252,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                                           0,
                                           true,
                                       ),
+                                      message: 'invalid event CPI framing',
                                       name: framingConstantName,
                                       offset: 0,
                                       size: renderConstantBytesArray(programEventFraming!.constant)?.len ?? null,

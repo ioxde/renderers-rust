@@ -27,7 +27,7 @@ impl ClaimVestedEvent {
         {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                "invalid event discriminator",
+                "invalid event CPI framing",
             ));
         }
         if data.get(8..16) != Some(&CLAIM_VESTED_EVENT_DISCRIMINATOR[..]) {

@@ -1156,6 +1156,9 @@ test('it generates from_bytes that validates both the framing prefix and the eve
         'pub fn from_bytes',
         'data.get(..EVENT_CPI_PREFIX.len()) != Some(&EVENT_CPI_PREFIX[..])',
         'data.get(8..16) != Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        // The framing check and the event discriminator check report distinct errors.
+        /data\.get\(\.\.EVENT_CPI_PREFIX\.len\(\)\) != Some\(&EVENT_CPI_PREFIX\[\.\.\]\) \{\s*return Err\(std::io::Error::new\(\s*std::io::ErrorKind::InvalidData,\s*"invalid event CPI framing",/,
+        /data\.get\(8\.\.16\) != Some\(&TRADE_EVENT_DISCRIMINATOR\[\.\.\]\) \{\s*return Err\(std::io::Error::new\(\s*std::io::ErrorKind::InvalidData,\s*"invalid event discriminator",/,
         // Both discriminator sizes are known, so the skip folds to a literal
         // with an explanatory comment on the line above.
         /\/\/ EVENT_CPI_PREFIX \(8\) \+ TRADE_EVENT_DISCRIMINATOR \(8\)\n\s*let mut data = &data\[16\.\.\];\n\s*Self::deserialize\(&mut data\)/,
