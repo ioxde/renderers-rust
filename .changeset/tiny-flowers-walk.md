@@ -1,0 +1,5 @@
+---
+'@codama/renderers-rust': patch
+---
+
+Event discriminator checks and body offsets are now rendered as literal byte ranges computed at generation time instead of `offset + CONST.len()` arithmetic. The generated arithmetic tripped `clippy::arithmetic_side_effects` in crates that deny it, and it was unnecessary because every input to it is known while rendering. Discriminator comparisons fold to a literal range such as `data.get(8..16)` whenever the constant's byte size is statically known, falling back to a `starts_with` tail probe only for link-typed constants of unknown size, and the skip past Anchor CPI framing folds to a single `&data[16..]` with a comment recording which constants it covers, chaining `[CONST.len()..]` slices only where a size is genuinely unknown. Scalar number discriminator constants are now compared via `to_le_bytes`/`to_be_bytes` rather than slice operations, which did not compile against a scalar. All of this goes through one `renderByteCheck` helper shared by the events template, the program-level identify conditions, and field discriminators, so the three no longer drift apart.

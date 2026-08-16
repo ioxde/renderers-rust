@@ -1,0 +1,7 @@
+---
+'@codama/renderers-rust': major
+---
+
+Required accounts and arguments are now mandatory constructor parameters on generated instruction builders instead of `Option` fields with setters. An account is required when it has no default value and is not marked optional in the IDL; an argument is required when it has no default value and is not itself an `Option` type. Both `<Instruction>Builder` and `<Instruction>CpiBuilder` now take these as positional parameters on `new`, store them as non-`Option` fields, and drop the corresponding setter methods, so a missing field is a compile error at the call site rather than a runtime `.expect()` panic inside `instruction()`. Accounts that carry a default — PDA, fixed public key, or program ID — stay optional with their setters, and PDA seed resolution reads required fields directly instead of unwrapping. Because the builders no longer need a `Default` impl to start from, `#[derive(Default)]` is gone from the generated builder structs.
+
+**Breaking:** after regenerating, every construction site must be updated. `<Instruction>Builder::new()` becomes `<Instruction>Builder::new(account_a, account_b, arg_a, ...)` with required accounts first in IDL order followed by required arguments in IDL order, and the `.account_a(...)`/`.arg_a(...)` calls for those fields must be deleted. The same applies to `<Instruction>CpiBuilder::new`, whose `program` parameter is still first. Code that relied on `<Instruction>Builder::default()` must switch to the explicit constructor.
