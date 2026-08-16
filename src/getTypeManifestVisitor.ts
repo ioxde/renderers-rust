@@ -1,4 +1,4 @@
-import { CODAMA_ERROR__RENDERERS__UNSUPPORTED_NODE, CodamaError } from '@codama/errors';
+import { CODAMA_ERROR__RENDERERS__UNSUPPORTED_NODE, CodamaError, logWarn } from '@codama/errors';
 import {
     AccountNode,
     arrayTypeNode,
@@ -8,6 +8,7 @@ import {
     fixedCountNode,
     InstructionNode,
     isNode,
+    isScalarEnum,
     NumberTypeNode,
     numberTypeNode,
     parseDocs,
@@ -252,13 +253,41 @@ export function getTypeManifestVisitor(options: {
                         throw new Error('Enum type must have a parent name.');
                     }
 
-                    const variants = (enumType.variants ?? []).map(variant => visit(variant, self));
-                    const variantNames = variants.map(variant => variant.type).join('\n');
+                    const enumName = pascalCase(originalParentName);
+                    const enumVariants = enumType.variants ?? [];
+                    const variants = enumVariants.map(variant => visit(variant, self));
                     const mergedManifest = mergeManifests(variants);
+
+                    // Borsh always writes a one-byte discriminator, so a wider size cannot be honoured.
+                    const size = resolveNestedTypeNode(enumType.size);
+                    if (size.format !== 'u8') {
+                        logWarn(
+                            `[Rust] Enum [${enumName}] declares a '${size.format}' size but Borsh always ` +
+                                `encodes a one-byte discriminator; the declared size cannot be represented.`,
+                        );
+                    }
+
+                    // Codama infers an omitted discriminator from the variant position whereas Rust infers
+                    // it from the previous variant, so once any variant is explicit they all must be.
+                    const hasExplicitDiscriminators = enumVariants.some(variant => variant.discriminator !== undefined);
+                    const variantTypes = variants
+                        .map((variant, index) =>
+                            hasExplicitDiscriminators
+                                ? withDiscriminant(variant.type, enumVariants[index].discriminator ?? index)
+                                : variant.type,
+                        )
+                        .join('\n');
+
+                    let attributes = '';
+                    if (hasExplicitDiscriminators) {
+                        // Non-unit variants with explicit discriminants require an explicit `repr` (E0732).
+                        if (!isScalarEnum(enumType)) attributes += '#[repr(u8)]\n';
+                        attributes += '#[borsh(use_discriminant = true)]\n';
+                    }
 
                     return {
                         ...mergedManifest,
-                        type: `pub enum ${pascalCase(originalParentName)} {\n${variantNames}\n}`,
+                        type: `${attributes}pub enum ${enumName} {\n${variantTypes}\n}`,
                     };
                 },
 
@@ -510,6 +539,13 @@ export function getTypeManifestVisitor(options: {
                 },
             }),
     );
+}
+
+/** Appends an explicit discriminant to a rendered enum variant, before its trailing comma. */
+function withDiscriminant(renderedVariant: string, discriminant: number): string {
+    return renderedVariant.endsWith(',')
+        ? `${renderedVariant.slice(0, -1)} = ${discriminant},`
+        : `${renderedVariant} = ${discriminant}`;
 }
 
 function mergeManifests(manifests: TypeManifest[]): Pick<TypeManifest, 'imports' | 'nestedStructs'> {

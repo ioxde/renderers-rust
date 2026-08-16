@@ -663,6 +663,205 @@ test('it renders inline pdaNode with argumentValueNode variable seed using type 
     codeContains(content, [`self.mint.as_ref()`, `self.label.clone().to_string().as_ref()`]);
 });
 
+test('it renders numeric inline pdaNode seeds as little-endian bytes', () => {
+    // Given a cross-program inline PDA whose variable seed is a u64 instruction argument.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'mint' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaNode({
+                                name: 'nonceRecord',
+                                programId: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+                                seeds: [
+                                    variablePdaSeedNode('mint', publicKeyTypeNode()),
+                                    variablePdaSeedNode('nonce', numberTypeNode('u64')),
+                                ],
+                            }),
+                            [
+                                pdaSeedValueNode('mint', accountValueNode('mint')),
+                                pdaSeedValueNode('nonce', argumentValueNode('nonce')),
+                            ],
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'nonceRecord',
+                    }),
+                ],
+                arguments: [instructionArgumentNode({ name: 'nonce', type: numberTypeNode('u64') })],
+                name: 'createNonceRecord',
+            }),
+        ],
+        name: 'testProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/create_nonce_record.rs').content;
+
+    // Then the numeric seed is hashed as raw little-endian bytes, never as decimal ASCII.
+    codeContains(content, [`&self.nonce.clone().to_le_bytes()`]);
+    codeDoesNotContains(content, [`to_string().as_ref()`]);
+});
+
+test('it renders big-endian numeric inline pdaNode seeds with to_be_bytes', () => {
+    // Given an inline PDA whose variable seed declares big-endian byte order.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'mint' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaNode({
+                                name: 'nonceRecord',
+                                seeds: [
+                                    variablePdaSeedNode('mint', publicKeyTypeNode()),
+                                    variablePdaSeedNode('nonce', numberTypeNode('u64', 'be')),
+                                ],
+                            }),
+                            [
+                                pdaSeedValueNode('mint', accountValueNode('mint')),
+                                pdaSeedValueNode('nonce', argumentValueNode('nonce')),
+                            ],
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'nonceRecord',
+                    }),
+                ],
+                arguments: [instructionArgumentNode({ name: 'nonce', type: numberTypeNode('u64') })],
+                name: 'createNonceRecord',
+            }),
+        ],
+        name: 'testProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/create_nonce_record.rs').content;
+
+    // Then the seed uses the big-endian conversion.
+    codeContains(content, [`&self.nonce.clone().to_be_bytes()`]);
+    codeDoesNotContains(content, [`to_le_bytes()`]);
+});
+
+test('it keeps rendering string inline pdaNode seeds via to_string', () => {
+    // Given an inline PDA mixing a string seed with a numeric one.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'mint' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaNode({
+                                name: 'record',
+                                seeds: [
+                                    variablePdaSeedNode('mint', publicKeyTypeNode()),
+                                    variablePdaSeedNode('label', stringTypeNode('utf8')),
+                                    variablePdaSeedNode('index', numberTypeNode('u32')),
+                                ],
+                            }),
+                            [
+                                pdaSeedValueNode('mint', accountValueNode('mint')),
+                                pdaSeedValueNode('label', argumentValueNode('label')),
+                                pdaSeedValueNode('index', argumentValueNode('index')),
+                            ],
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'record',
+                    }),
+                ],
+                arguments: [
+                    instructionArgumentNode({ name: 'label', type: stringTypeNode('utf8') }),
+                    instructionArgumentNode({ name: 'index', type: numberTypeNode('u32') }),
+                ],
+                name: 'createRecord',
+            }),
+        ],
+        name: 'testProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/create_record.rs').content;
+
+    // Then only the numeric seed switches to byte conversion; strings keep the fallback.
+    codeContains(content, [`self.label.clone().to_string().as_ref()`, `&self.index.clone().to_le_bytes()`]);
+});
+
+test('it renders omitted-default numeric seeds with an explicit integer type', () => {
+    // Given an inline PDA whose numeric seed comes from an omitted-default argument.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'owner' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaNode({
+                                name: 'record',
+                                seeds: [
+                                    variablePdaSeedNode('owner', publicKeyTypeNode()),
+                                    variablePdaSeedNode('kind', numberTypeNode('u32')),
+                                ],
+                            }),
+                            [
+                                pdaSeedValueNode('owner', accountValueNode('owner')),
+                                pdaSeedValueNode('kind', argumentValueNode('kind')),
+                            ],
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'record',
+                    }),
+                ],
+                arguments: [
+                    instructionArgumentNode({
+                        defaultValue: numberValueNode(42),
+                        defaultValueStrategy: 'omitted',
+                        name: 'kind',
+                        type: numberTypeNode('u32'),
+                    }),
+                ],
+                name: 'createRecord',
+            }),
+        ],
+        name: 'testProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/create_record.rs').content;
+
+    // Then the inlined literal is pinned to the seed's format so Rust can infer it.
+    codeContains(content, [`&(42 as u32).to_le_bytes()`]);
+});
+
+test('it throws when a program has no address', () => {
+    // Given a program whose IDL carried no address (e.g. a legacy Anchor v0.x IDL).
+    const node = programNode({
+        instructions: [instructionNode({ name: 'mintTokens' })],
+        name: 'splToken',
+        publicKey: '',
+    });
+
+    // When we render it, then it fails loudly instead of emitting `address!("")`.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/Program \[splToken\] has no address/);
+});
+
 test('it renders inline pdaNode with custom programId', () => {
     // Given an instruction with an inline pdaNode that specifies a custom programId.
     const node = programNode({

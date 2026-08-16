@@ -556,6 +556,17 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                 },
 
                 visitProgram(node, { self }) {
+                    if (!node.publicKey || node.publicKey.trim().length === 0) {
+                        // `address!("")` fails Rust const-eval deep inside `five8_const`,
+                        // so refuse to emit a `programs.rs` that cannot compile.
+                        throw new Error(
+                            `[Rust] Program [${node.name}] has no address. The IDL must provide a program ` +
+                                'address (Anchor IDLs set it via the top-level `address` field, or ' +
+                                '`metadata.address` on older IDLs); the generated `programs.rs` cannot ' +
+                                'compile without one.',
+                        );
+                    }
+
                     programEventFraming = deriveProgramEventFraming(node);
                     let renders = mergeRenderMaps([
                         ...(node.accounts ?? []).map(account => visit(account, self)),
@@ -1353,6 +1364,18 @@ function resolveInstructionPdaDefaults(ctx: {
                 const resolvedType = resolveNestedTypeNode(seed.type);
                 const seedValue = binding.value;
 
+                // Numeric seeds hash as their endian-ordered bytes, never as decimal
+                // ASCII. Mirrors the `to_le_bytes`/`to_be_bytes` dispatch in the
+                // `accountsPage`/`pdasPage` templates. `shortU16` has no such method,
+                // so it keeps the generic fallback below.
+                const numberSeed =
+                    resolvedType.kind === 'numberTypeNode' && resolvedType.format !== 'shortU16'
+                        ? {
+                              bytesMethod: resolvedType.endian === 'le' ? 'to_le_bytes' : 'to_be_bytes',
+                              rustType: resolvedType.format,
+                          }
+                        : null;
+
                 if (isNode(seedValue, 'accountValueNode')) {
                     const refName = snakeCase(seedValue.name);
                     const isEither = eitherSignerAccounts.has(seedValue.name);
@@ -1376,6 +1399,12 @@ function resolveInstructionPdaDefaults(ctx: {
                         renderedSeeds.push({ kind: 'accountRef', rawName: refName, render: `${valueExpr}.as_ref()` });
                     } else if (resolvedType.kind === 'bytesTypeNode') {
                         renderedSeeds.push({ kind: 'accountRef', rawName: refName, render: `&${valueExpr}` });
+                    } else if (numberSeed) {
+                        renderedSeeds.push({
+                            kind: 'accountRef',
+                            rawName: refName,
+                            render: `&${valueExpr}.${numberSeed.bytesMethod}()`,
+                        });
                     } else {
                         renderedSeeds.push({
                             kind: 'accountRef',
@@ -1411,6 +1440,13 @@ function resolveInstructionPdaDefaults(ctx: {
                             renderedSeeds.push({ kind: 'argumentRef', render: `${argDefault.value}.as_ref()` });
                         } else if (resolvedType.kind === 'bytesTypeNode') {
                             renderedSeeds.push({ kind: 'argumentRef', render: `&${argDefault.value}` });
+                        } else if (numberSeed) {
+                            // Omitted defaults inline a bare literal, which Rust cannot resolve to a
+                            // concrete integer type on its own; pin it to the seed's declared format.
+                            renderedSeeds.push({
+                                kind: 'argumentRef',
+                                render: `&(${argDefault.value} as ${numberSeed.rustType}).${numberSeed.bytesMethod}()`,
+                            });
                         } else {
                             renderedSeeds.push({
                                 kind: 'argumentRef',
@@ -1424,6 +1460,11 @@ function resolveInstructionPdaDefaults(ctx: {
                             renderedSeeds.push({ kind: 'argumentRef', render: `${valueExpr}.as_ref()` });
                         } else if (resolvedType.kind === 'bytesTypeNode') {
                             renderedSeeds.push({ kind: 'argumentRef', render: `&${valueExpr}` });
+                        } else if (numberSeed) {
+                            renderedSeeds.push({
+                                kind: 'argumentRef',
+                                render: `&${valueExpr}.${numberSeed.bytesMethod}()`,
+                            });
                         } else {
                             renderedSeeds.push({
                                 kind: 'argumentRef',
@@ -1436,6 +1477,11 @@ function resolveInstructionPdaDefaults(ctx: {
                             renderedSeeds.push({ kind: 'argumentRef', render: `${valueExpr}.as_ref()` });
                         } else if (resolvedType.kind === 'bytesTypeNode') {
                             renderedSeeds.push({ kind: 'argumentRef', render: `&${valueExpr}` });
+                        } else if (numberSeed) {
+                            renderedSeeds.push({
+                                kind: 'argumentRef',
+                                render: `&${valueExpr}.${numberSeed.bytesMethod}()`,
+                            });
                         } else {
                             renderedSeeds.push({
                                 kind: 'argumentRef',
