@@ -119,7 +119,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     const typeManifest = visit(node, typeManifestVisitor);
 
                     // Discriminator constants.
-                    const fields = resolveNestedTypeNode(node.data).fields;
+                    const fields = resolveNestedTypeNode(node.data).fields ?? [];
                     const discriminatorConstants = getDiscriminatorConstants({
                         discriminatorNodes: node.discriminators ?? [],
                         fields,
@@ -216,7 +216,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     const typeManifest = visit(syntheticType, typeManifestVisitor);
 
                     // Discriminator constants (excluding the hoisted framing one for CPI-framed events).
-                    const fields = isNode(innerType, 'structTypeNode') ? innerType.fields : [];
+                    const fields = isNode(innerType, 'structTypeNode') ? (innerType.fields ?? []) : [];
                     const discriminatorConstants = getDiscriminatorConstants({
                         discriminatorNodes: discriminators,
                         fields,
@@ -313,7 +313,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     // Discriminator constants.
                     const discriminatorConstants = getDiscriminatorConstants({
                         discriminatorNodes: node.discriminators ?? [],
-                        fields: node.arguments,
+                        fields: node.arguments ?? [],
                         getImportFrom,
                         prefix: node.name,
                         typeManifestVisitor,
@@ -331,7 +331,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     let hasArgs = false;
                     let hasOptional = false;
 
-                    node.arguments.forEach(argument => {
+                    (node.arguments ?? []).forEach(argument => {
                         const argumentVisitor = getTypeManifestVisitor({
                             getImportFrom,
                             getTraitsFromNode,
@@ -384,7 +384,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         return { name, type: manifest.type };
                     });
 
-                    const struct = structTypeNodeFromInstructionArgumentNodes(node.arguments);
+                    const struct = structTypeNodeFromInstructionArgumentNodes(node.arguments ?? []);
                     const structVisitor = getTypeManifestVisitor({
                         getImportFrom,
                         getTraitsFromNode,
@@ -399,8 +399,9 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         .remove(`generatedInstructions::${pascalCase(node.name)}`);
 
                     // Accounts that are optional in the builder (have defaults or are IDL-optional).
+                    const nodeAccounts = node.accounts ?? [];
                     const builderOptionalAccounts = new Set(
-                        node.accounts
+                        nodeAccounts
                             .filter(
                                 account =>
                                     account.isOptional ||
@@ -412,7 +413,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     );
                     // CPI can't derive AccountInfo from PDA/publicKey defaults.
                     const cpiBuilderOptionalAccounts = new Set(
-                        node.accounts
+                        nodeAccounts
                             .filter(
                                 account =>
                                     account.isOptional ||
@@ -436,7 +437,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     // dependency-first order so derived PDAs can feed later derivations.
                     // Strip `isOptional` for the ordering visit: codama rejects optional
                     // accounts as seed sources, but the builder unwraps them at runtime.
-                    const orderingNode = { ...node, accounts: node.accounts.map(a => ({ ...a, isOptional: false })) };
+                    const orderingNode = { ...node, accounts: nodeAccounts.map(a => ({ ...a, isOptional: false })) };
                     const orderedAccountNames = visit(orderingNode, resolvedInstructionInputVisitor)
                         .filter(isNodeFilter('instructionAccountNode'))
                         .map(input => input.name as string);
@@ -452,7 +453,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         requiredArgNames,
                         stack,
                     });
-                    const hasRequiredAccounts = node.accounts.some(a => !builderOptionalAccounts.has(a.name));
+                    const hasRequiredAccounts = nodeAccounts.some(a => !builderOptionalAccounts.has(a.name));
 
                     return createRenderMap(`instructions/${snakeCase(node.name)}.rs`, {
                         content: render('instructionsPage.njk', {
@@ -467,7 +468,9 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             hasRequiredAccounts,
                             hasRequiredArgs,
                             imports: imports.toString(dependencyMap),
-                            instruction: node,
+                            // Codama omits empty node arrays, but the templates do arithmetic on
+                            // `instruction.accounts.length`, so hand them a normalised array.
+                            instruction: { ...node, accounts: nodeAccounts },
                             instructionArgs,
                             program,
                             requiredArgNames,
@@ -487,7 +490,8 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     const imports = new ImportMap();
 
                     // Process seeds
-                    const seeds = node.seeds.map(seed => {
+                    const nodeSeeds = node.seeds ?? [];
+                    const seeds = nodeSeeds.map(seed => {
                         if (isNode(seed, 'variablePdaSeedNode')) {
                             const seedManifest = visit(seed.type, typeManifestVisitor);
                             imports.mergeWith(seedManifest.imports);
@@ -504,7 +508,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         return { ...seed, resolvedType, seedBytesExpr: seedBytes.render, typeManifest: seedManifest };
                     });
 
-                    const hasVariableSeeds = node.seeds.filter(isNodeFilter('variablePdaSeedNode')).length > 0;
+                    const hasVariableSeeds = nodeSeeds.filter(isNodeFilter('variablePdaSeedNode')).length > 0;
                     const constantSeeds = seeds
                         .filter(isNodeFilter('constantPdaSeedNode'))
                         .filter(seed => !isNode(seed.value, 'programIdValueNode'));
@@ -523,7 +527,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     if (!hasVariableSeeds) {
                         const foldProgram = dynamicProgramOnly ? canonicalProgramAddress : programAddress;
                         if (foldProgram) {
-                            precomputedAddress = computePdaAddress(node.seeds, foldProgram) ?? undefined;
+                            precomputedAddress = computePdaAddress(nodeSeeds, foldProgram) ?? undefined;
                         }
                     }
 
@@ -554,20 +558,21 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                 visitProgram(node, { self }) {
                     programEventFraming = deriveProgramEventFraming(node);
                     let renders = mergeRenderMaps([
-                        ...node.accounts.map(account => visit(account, self)),
-                        ...node.definedTypes.map(type => visit(type, self)),
+                        ...(node.accounts ?? []).map(account => visit(account, self)),
+                        ...(node.definedTypes ?? []).map(type => visit(type, self)),
                         ...(node.events ?? []).map(event => visit(event, self)),
                         ...getAllInstructionsWithSubs(node, {
                             leavesOnly: !renderParentInstructions,
                         }).map(ix => visit(ix, self)),
-                        ...node.pdas.map(pda => visit(pda, self)),
+                        ...(node.pdas ?? []).map(pda => visit(pda, self)),
                     ]);
 
                     // Errors.
-                    if (node.errors.length > 0) {
+                    const programErrors = node.errors ?? [];
+                    if (programErrors.length > 0) {
                         renders = addToRenderMap(renders, `errors/${snakeCase(node.name)}.rs`, {
                             content: render('errorsPage.njk', {
-                                errors: node.errors,
+                                errors: programErrors,
                                 imports: new ImportMap().toString(dependencyMap),
                                 program: node,
                             }),
@@ -691,7 +696,7 @@ function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
         return NO_SKIP;
     }
     let hasNonFixedSize = false;
-    const prefixSize = event.data.prefix.reduce((sum, p) => {
+    const prefixSize = (event.data.prefix ?? []).reduce((sum, p) => {
         if (!isNode(p.type, 'fixedSizeTypeNode')) {
             logWarn(
                 `[Rust] Event [${event.name}] has a non-fixed-size hidden prefix entry; ` +
@@ -718,9 +723,10 @@ function deriveProgramEventFraming(programNode: ProgramNode | null): ResolvedPro
     for (const event of programNode.events ?? []) {
         if (!event.framing) continue;
         if (!isNode(event.data, 'hiddenPrefixTypeNode')) continue;
-        if (event.data.prefix.length === 0) continue;
+        const prefix = event.data.prefix ?? [];
+        if (prefix.length === 0) continue;
         if (!resolved) {
-            resolved = { constant: event.data.prefix[0], framing: event.framing };
+            resolved = { constant: prefix[0], framing: event.framing };
             continue;
         }
         if (resolved.framing.sharedConstantName !== event.framing.sharedConstantName) {
@@ -740,7 +746,7 @@ function isEventCpiFramed(event: EventNode, programEventFraming: ResolvedProgram
     if (!event.framing) return false;
     if (event.framing.sharedConstantName !== programEventFraming.framing.sharedConstantName) return false;
     if (!isNode(event.data, 'hiddenPrefixTypeNode')) return false;
-    return event.data.prefix.length > 0;
+    return (event.data.prefix ?? []).length > 0;
 }
 
 /**
@@ -775,10 +781,11 @@ function getCpiFramedSkip(
     if (!isNode(event.data, 'hiddenPrefixTypeNode')) {
         return NO_SKIP;
     }
+    const prefix = event.data.prefix ?? [];
     let knownSize = 0;
     const ranges: string[] = [];
     const commentParts: string[] = [];
-    for (const entry of event.data.prefix) {
+    for (const entry of prefix) {
         const size = constantValueSize(entry);
         const named = namedConstants.find(
             c => c.constant === entry || JSON.stringify(c.constant) === JSON.stringify(entry),
@@ -800,7 +807,7 @@ function getCpiFramedSkip(
     if (knownSize > 0 || ranges.length === 0) {
         ranges.unshift(`[${knownSize}..]`);
     }
-    const comment = event.data.prefix.length > 1 ? commentParts.join(' + ') : null;
+    const comment = prefix.length > 1 ? commentParts.join(' + ') : null;
     return { comment, expr: `&data${ranges.join('')}` };
 }
 
@@ -852,7 +859,7 @@ function buildProgramEventsRender(
             // program-level shared constant and prepended manually below.
             const perEventDiscriminators = isCpiFramed ? allDiscriminators.slice(1) : allDiscriminators;
             const innerType = resolveNestedTypeNode(event.data);
-            const fields = isNode(innerType, 'structTypeNode') ? innerType.fields : [];
+            const fields = isNode(innerType, 'structTypeNode') ? (innerType.fields ?? []) : [];
             const { conditions: perEventConditions, imports: condImports } = getDiscriminatorConditions({
                 discriminatorNodes: perEventDiscriminators,
                 fields,
@@ -1007,7 +1014,7 @@ function assertNoAggregateNameCollisions(events: EventNode[], programNode: Progr
 function getDynamicProgramOnlyPdas(program: ProgramNode): Set<string> {
     const allUsagesDynamic = new Map<string, boolean>();
     for (const instruction of getAllInstructionsWithSubs(program, { leavesOnly: false })) {
-        for (const account of instruction.accounts) {
+        for (const account of instruction.accounts ?? []) {
             const defaultValue = account.defaultValue;
             if (!defaultValue || !isNode(defaultValue, 'pdaValueNode')) continue;
             if (!isNode(defaultValue.pda, 'pdaLinkNode')) continue;
@@ -1052,7 +1059,7 @@ function renderConstantSeedBytes(
 
 function getConflictsForInstructionAccountsAndArgs(instruction: InstructionNode): string[] {
     const allNames = [
-        ...instruction.accounts.map(account => account.name),
+        ...(instruction.accounts ?? []).map(account => account.name),
         ...getAllInstructionArguments(instruction).map(argument => argument.name),
     ];
     const duplicates = allNames.filter((e, i, a) => a.indexOf(e) !== i);
@@ -1107,7 +1114,7 @@ function resolveInstructionPdaDefaults(ctx: {
         stack,
     } = ctx;
 
-    const accounts = instruction.accounts;
+    const accounts = instruction.accounts ?? [];
     // Includes extraArguments — Anchor lowers account-data seeds (e.g. `guard.mint`)
     // to caller-supplied extra arguments.
     const instructionArguments = getAllInstructionArguments(instruction);
@@ -1171,6 +1178,7 @@ function resolveInstructionPdaDefaults(ctx: {
             continue;
         }
         const defaultValue = account.defaultValue;
+        const seedBindings = defaultValue.seeds ?? [];
 
         let pdaNode: PdaNode | undefined;
         const isLinked = isNode(defaultValue.pda, 'pdaLinkNode');
@@ -1202,7 +1210,7 @@ function resolveInstructionPdaDefaults(ctx: {
         // Upstream account defaults for seed resolution.
         const accountDefaults: Record<string, string> = {};
         const eitherSignerAccounts = new Set<string>();
-        for (const seedBinding of defaultValue.seeds) {
+        for (const seedBinding of seedBindings) {
             if (isNode(seedBinding.value, 'accountValueNode')) {
                 const refName = seedBinding.value.name;
                 const refAccount = accounts.find(a => a.name === refName);
@@ -1227,7 +1235,7 @@ function resolveInstructionPdaDefaults(ctx: {
         //                       when the helper takes one).
         // Inline (pdaNode):     emit find_program_address() with raw byte-slice seeds.
         if (renderAsLinked) {
-            for (const seedBinding of defaultValue.seeds) {
+            for (const seedBinding of seedBindings) {
                 const seedValue = seedBinding.value;
 
                 if (isNode(seedValue, 'accountValueNode')) {
@@ -1281,7 +1289,7 @@ function resolveInstructionPdaDefaults(ctx: {
                     // Pubkey seeds need by-ref for the typed find_*_pda() signature.
                     let isByRef = false;
                     if (pdaNode) {
-                        const pdaSeed = pdaNode.seeds.find(
+                        const pdaSeed = (pdaNode.seeds ?? []).find(
                             s => isNode(s, 'variablePdaSeedNode') && s.name === seedBinding.name,
                         );
                         if (pdaSeed && isNode(pdaSeed, 'variablePdaSeedNode')) {
@@ -1315,7 +1323,7 @@ function resolveInstructionPdaDefaults(ctx: {
                         `in instruction [${instructionName}].`,
                 );
             }
-            for (const seed of pdaNode.seeds) {
+            for (const seed of pdaNode.seeds ?? []) {
                 if (isNode(seed, 'constantPdaSeedNode')) {
                     if (isNode(seed.value, 'programIdValueNode')) {
                         // The deriving program doubles as a seed; honor the runtime ref.
@@ -1334,7 +1342,7 @@ function resolveInstructionPdaDefaults(ctx: {
 
                 if (!isNode(seed, 'variablePdaSeedNode')) continue;
 
-                const binding = defaultValue.seeds.find(s => s.name === seed.name);
+                const binding = seedBindings.find(s => s.name === seed.name);
                 if (!binding) {
                     throw new Error(
                         `[Rust] Missing seed value for variable seed [${seed.name}] in PDA default ` +
@@ -1447,7 +1455,7 @@ function resolveInstructionPdaDefaults(ctx: {
             }
         }
 
-        const pdaHasVariableSeeds = pdaNode ? pdaNode.seeds.some(s => isNode(s, 'variablePdaSeedNode')) : true;
+        const pdaHasVariableSeeds = pdaNode ? (pdaNode.seeds ?? []).some(s => isNode(s, 'variablePdaSeedNode')) : true;
 
         // Pinned programs (pdaNode.programId) are baked into the generated
         // helpers and _ADDRESS constant, so the builder passes no program arg.

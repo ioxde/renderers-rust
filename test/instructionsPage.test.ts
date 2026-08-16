@@ -46,6 +46,23 @@ test('it renders a public instruction data struct', () => {
     ]);
 });
 
+test('it renders an instruction without accounts', () => {
+    // Given an instruction with no accounts, for which codama omits the `accounts` array entirely.
+    const node = programNode({
+        instructions: [instructionNode({ name: 'mintTokens' })],
+        name: 'splToken',
+        publicKey: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+
+    // Then the CPI account capacity still counts the program account only.
+    const content = getFromRenderMap(renderMap, 'instructions/mint_tokens.rs').content;
+    codeContains(content, [`Vec::with_capacity(1 + remaining_accounts.len())`]);
+    codeDoesNotContains(content, ['NaN']);
+});
+
 test('it renders an instruction with a remainder str', () => {
     // Given the following program with 1 instruction.
     const node = programNode({
