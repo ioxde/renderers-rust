@@ -112,6 +112,32 @@ test('it renders a PDA with byte array seeds', () => {
     ]);
 });
 
+test('it renders a numeric seed as little-endian bytes', () => {
+    // Given a program with a PDA that has a numeric (u64) variable seed.
+    const node = programNode({
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'noncePda',
+                seeds: [
+                    constantPdaSeedNodeFromString('utf8', 'nonce'),
+                    variablePdaSeedNode('nonce', numberTypeNode('u64')),
+                ],
+            }),
+        ],
+        publicKey: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/nonce_pda.rs').content;
+
+    // Then the seed is encoded via its little-endian bytes, matching how the
+    // program derives the address, not via its decimal string.
+    codeContains(content, ['nonce: u64,', '&nonce.to_le_bytes(),']);
+    codeDoesNotContains(content, ['nonce.to_string().as_ref(),']);
+});
+
 test('it renders a PDA module file', () => {
     // Given a root node with a program containing multiple PDAs.
     const program = programNode({

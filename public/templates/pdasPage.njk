@@ -52,6 +52,8 @@ pub fn create_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}
@@ -87,6 +89,8 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}
@@ -123,6 +127,8 @@ pub fn create_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}
@@ -159,6 +165,8 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}
@@ -195,6 +203,8 @@ pub fn create_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}
@@ -236,6 +246,8 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
             {{ seed.name | snakeCase }}.as_ref(),
           {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'bytesTypeNode' %}
             &{{ seed.name | snakeCase }},
+          {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'numberTypeNode' %}
+            &{{ seed.name | snakeCase }}.{{ 'to_le_bytes' if seed.resolvedType.endian == 'le' else 'to_be_bytes' }}(),
           {% else %}
             {{ seed.name | snakeCase }}.to_string().as_ref(),
           {% endif %}

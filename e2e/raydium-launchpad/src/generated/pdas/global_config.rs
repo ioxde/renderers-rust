@@ -21,8 +21,8 @@ pub fn create_global_config_pda(
         &[
             GLOBAL_CONFIG_SEED,
             quote_token_mint.as_ref(),
-            curve_type.to_string().as_ref(),
-            index.to_string().as_ref(),
+            &curve_type.to_le_bytes(),
+            &index.to_le_bytes(),
             &[bump],
         ],
         &RAYDIUM_LAUNCHPAD_ID,
@@ -37,8 +37,8 @@ pub fn find_global_config_pda(
         &[
             GLOBAL_CONFIG_SEED,
             quote_token_mint.as_ref(),
-            curve_type.to_string().as_ref(),
-            index.to_string().as_ref(),
+            &curve_type.to_le_bytes(),
+            &index.to_le_bytes(),
         ],
         &RAYDIUM_LAUNCHPAD_ID,
     )

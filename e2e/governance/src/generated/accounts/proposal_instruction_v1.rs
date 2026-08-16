@@ -45,8 +45,8 @@ impl ProposalInstructionV1 {
             &[
                 b"governance",
                 proposal.as_ref(),
-                option_index.to_string().as_ref(),
-                index.to_string().as_ref(),
+                &option_index.to_le_bytes(),
+                &index.to_le_bytes(),
                 &[bump],
             ],
             &crate::SPL_GOVERNANCE_ID,
@@ -62,8 +62,8 @@ impl ProposalInstructionV1 {
             &[
                 b"governance",
                 proposal.as_ref(),
-                option_index.to_string().as_ref(),
-                index.to_string().as_ref(),
+                &option_index.to_le_bytes(),
+                &index.to_le_bytes(),
             ],
             &crate::SPL_GOVERNANCE_ID,
         )

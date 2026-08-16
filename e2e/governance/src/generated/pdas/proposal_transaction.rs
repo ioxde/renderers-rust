@@ -21,8 +21,8 @@ pub fn create_proposal_transaction_pda(
         &[
             PROPOSAL_TRANSACTION_SEED,
             proposal.as_ref(),
-            option_index.to_string().as_ref(),
-            index.to_string().as_ref(),
+            &option_index.to_le_bytes(),
+            &index.to_le_bytes(),
             &[bump],
         ],
         &SPL_GOVERNANCE_ID,
@@ -38,8 +38,8 @@ pub fn find_proposal_transaction_pda(
         &[
             PROPOSAL_TRANSACTION_SEED,
             proposal.as_ref(),
-            option_index.to_string().as_ref(),
-            index.to_string().as_ref(),
+            &option_index.to_le_bytes(),
+            &index.to_le_bytes(),
         ],
         &SPL_GOVERNANCE_ID,
     )

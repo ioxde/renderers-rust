@@ -13,13 +13,13 @@ pub fn create_amm_config_pda(
     bump: u8,
 ) -> Result<solana_address::Address, solana_address::error::AddressError> {
     solana_address::Address::create_program_address(
-        &[AMM_CONFIG_SEED, index.to_string().as_ref(), &[bump]],
+        &[AMM_CONFIG_SEED, &index.to_le_bytes(), &[bump]],
         &RAYDIUM_CP_SWAP_ID,
     )
 }
 pub fn find_amm_config_pda(index: u16) -> (solana_address::Address, u8) {
     solana_address::Address::find_program_address(
-        &[AMM_CONFIG_SEED, index.to_string().as_ref()],
+        &[AMM_CONFIG_SEED, &index.to_le_bytes()],
         &RAYDIUM_CP_SWAP_ID,
     )
 }

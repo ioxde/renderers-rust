@@ -1,5 +1,25 @@
 # @codama/renderers-rust
 
+## 3.1.3
+
+### Patch Changes
+
+- [#102](https://github.com/codama-idl/renderers-rust/pull/102) [`c82d7e6`](https://github.com/codama-idl/renderers-rust/commit/c82d7e6ad61576b6453ad143a96c67fc2159a83f) Thanks [@plutohan](https://github.com/plutohan)! - Encode numeric PDA seeds as little-endian bytes in `find_pda`/`create_pda`
+
+## 3.1.2
+
+### Patch Changes
+
+- [#117](https://github.com/codama-idl/renderers-rust/pull/117) [`9b7ff9c`](https://github.com/codama-idl/renderers-rust/commit/9b7ff9cee4fcace4c9f6f6b9096382127e98a1ec) Thanks [@lorisleiva](https://github.com/lorisleiva)! - Support `@codama/nodes@1.10`, whose node array attributes are now optional (`Array<T> | undefined`). Array reads are guarded with `?? []` throughout the renderer, and the new `injectedValueNode` value kind now throws an explicit unsupported-node error rather than being silently mishandled.
+
+## 3.1.1
+
+### Patch Changes
+
+- [#82](https://github.com/codama-idl/renderers-rust/pull/82) [`13cfd0f`](https://github.com/codama-idl/renderers-rust/commit/13cfd0f3689c7a0535496d4ba59de2899db18d9e) Thanks [@ShuhaoQing](https://github.com/ShuhaoQing)! - Fix remaining accounts is_writable, is_signer order when invoke
+
+- [#99](https://github.com/codama-idl/renderers-rust/pull/99) [`f90173a`](https://github.com/codama-idl/renderers-rust/commit/f90173a2f489f63beabf2bf702f6467848ee0bc1) Thanks [@lorisleiva](https://github.com/lorisleiva)! - Bump Codama dependencies to the latest version.
+
 ## 3.1.0
 
 ### Minor Changes
