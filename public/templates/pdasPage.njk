@@ -5,7 +5,7 @@
 
 {{ imports }}
 
-{% if program and not dynamicProgramOnly %}
+{% if program and not canonicalProgramAddress and not dynamicProgramOnly %}
 use crate::{{ program.name | snakeCase | upper }}_ID;
 {% endif %}
 
@@ -22,9 +22,9 @@ pub const {{ pda.name | snakeCase | upper }}_SEED{% if constantSeeds.length > 1 
 pub const {{ pda.name | snakeCase | upper }}_ADDRESS: solana_address::Address =
     solana_address::address!("{{ precomputedAddress }}");
 {% endif %}
-{% if dynamicProgramOnly and canonicalProgramAddress %}
+{% if canonicalProgramAddress %}
 
-{# The IDL pins the owning program's address (Anchor address constraint), so bake it in. #}
+{# The IDL pins the deriving program, so bake it in; the pin wins over how the PDA is used. #}
 pub const {{ pda.name | snakeCase | upper }}_PROGRAM_ADDRESS: solana_address::Address =
     solana_address::address!("{{ canonicalProgramAddress }}");
 
@@ -101,7 +101,7 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
 }
 {% elif dynamicProgramOnly %}
 
-{# The deriving program is unpinned and only known at runtime, so callers pass it in. #}
+{# No pin and a runtime-only deriving program, so callers pass it in. #}
 {{- macros.docblock(pda.docs) -}}
 pub fn create_{{ pda.name | snakeCase }}_pda(
   {% if hasVariableSeeds %}

@@ -1,12 +1,17 @@
 import {
+    accountValueNode,
     bytesTypeNode,
     constantPdaSeedNode,
     constantPdaSeedNodeFromBytes,
     constantPdaSeedNodeFromString,
     fixedSizeTypeNode,
+    instructionAccountNode,
+    instructionNode,
     numberTypeNode,
     numberValueNode,
+    pdaLinkNode,
     pdaNode,
+    pdaValueNode,
     programNode,
     publicKeyTypeNode,
     publicKeyValueNode,
@@ -263,13 +268,110 @@ test('it renders constant publicKey seeds as byte-array seed constants', () => {
     const renderMap = visit(node, getRenderMapVisitor());
 
     // Then the publicKey seed renders as its base58-decoded byte slice.
-    codeContains(getFromRenderMap(renderMap, 'pdas/amm_pool.rs').content, [
+    const content = getFromRenderMap(renderMap, 'pdas/amm_pool.rs').content;
+    codeContains(content, [
         "pub const AMM_POOL_SEED_0: &'static [u8] = " +
             '&[75, 217, 73, 196, 54, 2, 195, 63, 32, 119, 144, 237, 22, 163, 82, 76, ' +
             '161, 185, 151, 92, 241, 33, 162, 169, 12, 255, 236, 125, 248, 182, 138, 205];',
         'pub const AMM_POOL_SEED_1: &\'static [u8] = b"amm_associated_seed";',
         'pub fn find_amm_pool_pda(',
     ]);
+    // And it derives under the pinned program, not this crate's.
+    codeContains(content, ['&AMM_POOL_PROGRAM_ADDRESS,']);
+    codeDoesNotContains(content, ['MY_PROGRAM_ID']);
+});
+
+test('it bakes a pinned foreign program into the helpers of an unused PDA', () => {
+    // Given a PDA pinned to a foreign program that no instruction account uses.
+    const node = programNode({
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'cpswapAuthority',
+                programId: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'vault_and_lp_mint_auth_seed')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/cpswap_authority.rs').content;
+
+    // Then the helpers and the folded address agree on the pinned program.
+    codeContains(content, [
+        'pub const CPSWAP_AUTHORITY_PROGRAM_ADDRESS: solana_address::Address =',
+        'solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");',
+        'pub const CPSWAP_AUTHORITY_ADDRESS: solana_address::Address =',
+        'solana_address::address!("GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL");',
+        '&CPSWAP_AUTHORITY_PROGRAM_ADDRESS,',
+    ]);
+    codeDoesNotContains(content, ['MY_PROGRAM_ID', 'program_address:']);
+});
+
+test('it bakes a pinned foreign program into the helpers of a mixed-use PDA', () => {
+    // Given a pinned PDA used both with and without a runtime program reference.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        defaultValue: publicKeyValueNode('CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C'),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapProgram',
+                    }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaLinkNode('cpswapAuthority'),
+                            [],
+                            accountValueNode('cpswapProgram'),
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapAuthority',
+                    }),
+                ],
+                name: 'migrate',
+            }),
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('cpswapAuthority'), []),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapAuthority',
+                    }),
+                ],
+                name: 'close',
+            }),
+        ],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'cpswapAuthority',
+                programId: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'vault_and_lp_mint_auth_seed')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/cpswap_authority.rs').content;
+
+    // Then the pin still wins over the mixed usage.
+    codeContains(content, [
+        'pub const CPSWAP_AUTHORITY_PROGRAM_ADDRESS: solana_address::Address =',
+        'solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");',
+        '&CPSWAP_AUTHORITY_PROGRAM_ADDRESS,',
+    ]);
+    codeDoesNotContains(content, ['MY_PROGRAM_ID']);
 });
 
 test('it bakes the local program into helpers of same-program PDAs', () => {

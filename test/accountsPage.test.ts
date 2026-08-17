@@ -1,5 +1,6 @@
 import {
     accountNode,
+    accountValueNode,
     bytesTypeNode,
     bytesValueNode,
     camelCase,
@@ -8,12 +9,17 @@ import {
     constantPdaSeedNodeFromString,
     constantValueNode,
     fixedSizeTypeNode,
+    instructionAccountNode,
+    instructionNode,
     numberTypeNode,
     numberValueNode,
     pdaLinkNode,
     pdaNode,
+    pdaValueNode,
+    programIdValueNode,
     programNode,
     publicKeyTypeNode,
+    publicKeyValueNode,
     structFieldTypeNode,
     structTypeNode,
     variablePdaSeedNode,
@@ -438,5 +444,148 @@ test('it renders account without anchor traits', () => {
     codeDoesNotContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
         '#[cfg(feature = "anchor")]',
         '#[cfg(feature = "anchor-idl-build")]',
+    ]);
+});
+
+test('it derives account PDA helpers under a pinned foreign program', () => {
+    // Given an account whose linked PDA is pinned to another program.
+    const node = programNode({
+        accounts: [
+            accountNode({
+                name: 'poolState',
+                pda: pdaLinkNode('poolState'),
+            }),
+        ],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'poolState',
+                programId: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+                seeds: [
+                    constantPdaSeedNodeFromString('utf8', 'pool'),
+                    constantPdaSeedNode(bytesTypeNode(), programIdValueNode()),
+                    variablePdaSeedNode('mint', publicKeyTypeNode()),
+                ],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'accounts/pool_state.rs').content;
+
+    // Then the inherent helpers derive under the pin, matching `pdas/pool_state.rs`.
+    codeContains(content, [
+        'solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C").as_ref(),',
+        '&solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"),',
+    ]);
+    // The owner guards still check this program — only the derivation moved.
+    codeContains(content, ['if account_info.owner != &crate::MY_PROGRAM_ID {']);
+});
+
+test('it refuses to render an account whose PDA derives under a runtime-only program', () => {
+    // Given an account linked to a PDA whose deriving program is only known at runtime.
+    const node = programNode({
+        accounts: [
+            accountNode({
+                name: 'poolState',
+                pda: pdaLinkNode('poolState'),
+            }),
+        ],
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapProgram',
+                    }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('poolState'), [], accountValueNode('cpswapProgram')),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'poolState',
+                    }),
+                ],
+                name: 'migrate',
+            }),
+        ],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'poolState',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'pool')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'accounts/pool_state.rs').content;
+
+    // Then the inherent helpers are omitted and a doc comment points at the standalone one.
+    codeDoesNotContains(content, ['pub fn create_pda(', 'pub fn find_pda(']);
+    codeContains(content, [
+        '/// This account is a PDA whose deriving program is only known at runtime, so it has',
+        '/// [`crate::pdas::find_pool_state_pda`], which takes the deriving program as a parameter.',
+    ]);
+    // The rest of the account still renders.
+    codeContains(content, ['pub struct PoolState', 'pub fn from_bytes(', 'pub fn fetch_pool_state(']);
+    // And the standalone helper still exists, taking the program as a parameter.
+    codeContains(getFromRenderMap(renderMap, 'pdas/pool_state.rs').content, [
+        'program_address: &solana_address::Address,',
+    ]);
+});
+
+test('it keeps account PDA helpers when the runtime program reference resolves', () => {
+    // Given the same shape, but the account naming the deriving program has a constant default.
+    const node = programNode({
+        accounts: [
+            accountNode({
+                name: 'poolState',
+                pda: pdaLinkNode('poolState'),
+            }),
+        ],
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        defaultValue: publicKeyValueNode('CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C'),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapProgram',
+                    }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('poolState'), [], accountValueNode('cpswapProgram')),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'poolState',
+                    }),
+                ],
+                name: 'migrate',
+            }),
+        ],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'poolState',
+                programId: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'pool')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it, then generation succeeds and the helpers derive under the pin.
+    const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'accounts/pool_state.rs').content;
+    codeContains(content, [
+        'pub fn find_pda(',
+        '&solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"),',
     ]);
 });

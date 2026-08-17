@@ -2177,3 +2177,47 @@ test('it folds constant-seed dynamic PDAs under the canonical program default', 
     codeContains(ixContent, [`unwrap_or(`, `crate::pdas::VAULT_AUTHORITY_ADDRESS`]);
     codeDoesNotContains(ixContent, [`find_vault_authority_pda`]);
 });
+
+test('it hashes a programIdValueNode seed as the pinned deriving program', () => {
+    // Given an inline PDA pinned to a foreign program that seeds on itself (Metaplex metadata).
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'mint' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaNode({
+                                name: 'metadata',
+                                programId: 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
+                                seeds: [
+                                    constantPdaSeedNodeFromString('utf8', 'metadata'),
+                                    constantPdaSeedNode(bytesTypeNode(), programIdValueNode()),
+                                    variablePdaSeedNode('mint', publicKeyTypeNode()),
+                                ],
+                            }),
+                            [pdaSeedValueNode('mint', accountValueNode('mint'))],
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'metadata',
+                    }),
+                ],
+                name: 'createMetadata',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'instructions/create_metadata.rs').content;
+
+    // Then the seed is the same program the address derives under, not this crate's.
+    codeContains(content, [
+        'solana_address::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s").as_ref(),',
+        '&solana_address::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"),',
+    ]);
+    codeDoesNotContains(content, ['crate::MY_PROGRAM_ID.as_ref(),']);
+});

@@ -159,6 +159,36 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         .filter(isNodeFilter('constantPdaSeedNode'))
                         .filter(seed => !isNode(seed.value, 'programIdValueNode'));
 
+                    const localProgramIdExpr = `crate::${snakeCase(program.name).toUpperCase()}_ID`;
+                    // No pin and no nameable program: an inherent method has no parameter to take
+                    // one, so the helpers are omitted rather than derived under the wrong program.
+                    const derivingProgramIsRuntimeOnly =
+                        !!pda && !pda.programId && getDynamicProgramOnlyPdas(program).has(pda.name as string);
+                    // Must pick the same deriving program as visitPda, or the inherent and the
+                    // standalone `pdas/` helpers return different addresses for one PDA.
+                    const pdaProgramExpr =
+                        pda?.programId && pda.programId !== program.publicKey
+                            ? `solana_address::address!("${pda.programId}")`
+                            : localProgramIdExpr;
+
+                    const accountDocs = [...(node.docs ?? [])];
+                    if (derivingProgramIsRuntimeOnly) {
+                        const findPdaFunction = `crate::pdas::find_${snakeCase(pda.name)}_pda`;
+                        logWarn(
+                            `[Rust] Account [${node.name}] is linked to PDA [${pda.name}], whose deriving ` +
+                                'program is only known at runtime, so no inherent `create_pda`/`find_pda` ' +
+                                `were generated for it. Use \`${findPdaFunction}\` instead, which takes the ` +
+                                "deriving program as a parameter. Pinning the PDA's `programId` in the IDL " +
+                                'would let the inherent helpers be generated.',
+                        );
+                        if (accountDocs.length > 0) accountDocs.push('');
+                        accountDocs.push(
+                            'This account is a PDA whose deriving program is only known at runtime, so it has',
+                            'no inherent `create_pda`/`find_pda`. Derive its address with',
+                            `[\`${findPdaFunction}\`], which takes the deriving program as a parameter.`,
+                        );
+                    }
+
                     const imports = typeManifest.imports
                         .mergeWith(...(hasVariableSeeds ? [seedsImports] : []))
                         .mergeWith(discriminatorConstants.imports)
@@ -167,13 +197,16 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     return createRenderMap(`accounts/${snakeCase(node.name)}.rs`, {
                         content: render('accountsPage.njk', {
                             account: node,
+                            accountDocs,
                             anchorTraits,
                             constantSeeds,
+                            derivingProgramIsRuntimeOnly,
                             discriminatorConstantName,
                             discriminatorConstants: discriminatorConstants.render,
                             hasVariableSeeds,
                             imports: imports.toString(dependencyMap),
                             pda,
+                            pdaProgramExpr,
                             program,
                             seeds,
                             typeManifest,
@@ -515,20 +548,22 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
 
                     const programAddress = node.programId ?? program?.publicKey;
 
-                    // Dynamic-only PDAs: helpers take the deriving program as a parameter,
-                    // and _ADDRESS folds under the canonical program, not this program's ID.
-                    const dynamicProgramOnly = getDynamicProgramOnlyPdas(program).has(node.name as string);
-                    // Codama pins foreign programs (IDL address constraint) on
-                    // pdaNode.programId; bake that address into the helpers.
+                    // A pin (Anchor's `seeds::program`) decides the deriving program on its own,
+                    // whatever the use-sites say.
                     const canonicalProgramAddress =
                         node.programId && node.programId !== program.publicKey ? node.programId : undefined;
+                    // Unpinned, and every use-site supplies its own program, so the helpers take one
+                    // as a parameter.
+                    const dynamicProgramOnly = getDynamicProgramOnlyPdas(program).has(node.name as string);
+
+                    // Keep this branch order in sync with pdasPage.njk: pin, then runtime-only, then
+                    // this program. Undefined means only the caller knows it, so nothing folds.
+                    const derivingProgramAddress =
+                        canonicalProgramAddress ?? (dynamicProgramOnly ? undefined : programAddress);
 
                     let precomputedAddress: string | undefined;
-                    if (!hasVariableSeeds) {
-                        const foldProgram = dynamicProgramOnly ? canonicalProgramAddress : programAddress;
-                        if (foldProgram) {
-                            precomputedAddress = computePdaAddress(nodeSeeds, foldProgram) ?? undefined;
-                        }
+                    if (!hasVariableSeeds && derivingProgramAddress) {
+                        precomputedAddress = computePdaAddress(nodeSeeds, derivingProgramAddress) ?? undefined;
                     }
 
                     // Template uses fully-qualified paths for return types and static methods,
@@ -1337,11 +1372,12 @@ function resolveInstructionPdaDefaults(ctx: {
             for (const seed of pdaNode.seeds ?? []) {
                 if (isNode(seed, 'constantPdaSeedNode')) {
                     if (isNode(seed.value, 'programIdValueNode')) {
-                        // The deriving program doubles as a seed; honor the runtime ref.
-                        const programSeedExpr = dynamicProgramRef ? programAddressExpr : localProgramIdExpr;
+                        // This seed is the deriving program itself, so reuse programAddressExpr;
+                        // re-deriving the local ID hashes the wrong program under a pin
+                        // (the Metaplex-metadata shape) and yields an address that never matches.
                         renderedSeeds.push({
                             kind: 'programId',
-                            render: `${programSeedExpr}.as_ref()`,
+                            render: `${programAddressExpr}.as_ref()`,
                         });
                     } else {
                         const seedBytes = renderConstantSeedBytes(seed, getImportFrom);

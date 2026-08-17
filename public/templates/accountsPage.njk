@@ -5,7 +5,7 @@
 
 {{ imports }}
 
-{{ macros.docblock(account.docs) }}
+{{ macros.docblock(accountDocs) }}
 {{ typeManifest.type }}
 
 {% for nestedStruct in typeManifest.nestedStructs %}
@@ -27,7 +27,7 @@ impl {{ account.name | pascalCase }} {
     ///
     {% for seed in seeds %}
       {% if seed.kind === 'constantPdaSeedNode' and seed.value.kind === 'programIdValueNode' %}
-        ///   {{ loop.index0 }}. `crate::{{ program.name | snakeCase | upper }}_ID`
+        ///   {{ loop.index0 }}. {% if derivingProgramIsRuntimeOnly %}the deriving program (a runtime value){% else %}`{{ pdaProgramExpr }}`{% endif %}
       {% elif seed.kind === 'constantPdaSeedNode' %}
         ///   {{ loop.index0 }}. `{{ account.name | pascalCase }}::PREFIX{{ '.' + index if constantSeeds.length > 1 }}`
         {% set index = index + 1 %}
@@ -50,7 +50,7 @@ impl {{ account.name | pascalCase }} {
     {% endif %}
   {% endif %}
 
-  {% if pda %}
+  {% if pda and not derivingProgramIsRuntimeOnly %}
     pub fn create_pda(
       {% if hasVariableSeeds %}
           {% for seed in seeds %}
@@ -65,7 +65,7 @@ impl {{ account.name | pascalCase }} {
         &[
           {% for seed in seeds %}
             {% if seed.kind === 'constantPdaSeedNode' and seed.value.kind === 'programIdValueNode' %}
-              crate::{{ program.name | snakeCase | upper }}_ID.as_ref(),
+              {{ pdaProgramExpr }}.as_ref(),
             {% elif seed.kind === 'constantPdaSeedNode' %}
               {{ seed.seedBytesExpr }},
             {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'publicKeyTypeNode' %}
@@ -80,7 +80,7 @@ impl {{ account.name | pascalCase }} {
           {% endfor %}
           &[bump],
         ],
-        &crate::{{ program.name | snakeCase | upper }}_ID,
+        &{{ pdaProgramExpr }},
       )
     }
 
@@ -99,7 +99,7 @@ impl {{ account.name | pascalCase }} {
         &[
           {% for seed in seeds %}
             {% if seed.kind === 'constantPdaSeedNode' and seed.value.kind === 'programIdValueNode' %}
-              crate::{{ program.name | snakeCase | upper }}_ID.as_ref(),
+              {{ pdaProgramExpr }}.as_ref(),
             {% elif seed.kind === 'constantPdaSeedNode' %}
               {{ seed.seedBytesExpr }},
             {% elif seed.kind == 'variablePdaSeedNode' and seed.resolvedType.kind == 'publicKeyTypeNode' %}
@@ -113,7 +113,7 @@ impl {{ account.name | pascalCase }} {
             {% endif %}
           {% endfor %}
         ],
-        &crate::{{ program.name | snakeCase | upper }}_ID,
+        &{{ pdaProgramExpr }},
       )
     }
   {% endif %}
