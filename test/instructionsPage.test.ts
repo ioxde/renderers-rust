@@ -1836,6 +1836,44 @@ test('it uses unwrap_or with precomputed address for zero-variable-seed linked P
     codeDoesNotContains(content, ['unwrap_or_else', 'find_config_pda']);
 });
 
+test('it calls the runtime finder for a constant-only PDA the generator could not fold', () => {
+    // Given a constant-only PDA with 16 seeds, one more than `find_program_address` can take,
+    // so `pdas/` emits no `_ADDRESS` for the builder to read.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('config'), []),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'config',
+                    }),
+                ],
+                name: 'doSomething',
+            }),
+        ],
+        name: 'testProgram',
+        pdas: [
+            pdaNode({
+                name: 'config',
+                seeds: Array.from({ length: 16 }, (_, i) => constantPdaSeedNodeFromString('utf8', `s${i}`)),
+            }),
+        ],
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/do_something.rs').content;
+
+    // Then the builder falls back to the runtime finder rather than a constant that is never emitted.
+    codeContains(content, ['unwrap_or_else', 'crate::pdas::find_config_pda(', ').0']);
+    codeDoesNotContains(content, ['crate::pdas::CONFIG_ADDRESS']);
+    codeDoesNotContains(getFromRenderMap(renderMap, 'pdas/config.rs').content, ['pub const CONFIG_ADDRESS']);
+});
+
 test('it derives linked PDAs with a dynamic programId by passing the program to the helper', () => {
     // Given linked PDAs whose deriving program is a runtime account reference.
     const node = programNode({
@@ -1902,6 +1940,74 @@ test('it derives linked PDAs with a dynamic programId by passing the program to 
         `pub const AUTHORITY_SEED`,
     ]);
     codeDoesNotContains(authorityPda, [`AUTHORITY_ADDRESS`, `_with_program`, `use crate::TEST_PROGRAM_ID`]);
+});
+
+test('it keeps the builder and the finder in step for a self-pinned PDA with a variable seed', () => {
+    // Given the same shape with both PDAs self-pinned. The finders then take no program parameter, so the builder
+    // must pass none — the variable-seed PDA has no folded constant to hide behind, so a mismatch is an E0061.
+    const node = programNode({
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'ammProgram',
+                    }),
+                    instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'market' }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(
+                            pdaLinkNode('pool'),
+                            [pdaSeedValueNode('market', accountValueNode('market'))],
+                            accountValueNode('ammProgram'),
+                        ),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: true,
+                        name: 'pool',
+                    }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('authority'), [], accountValueNode('ammProgram')),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'authority',
+                    }),
+                ],
+                name: 'migrate',
+            }),
+        ],
+        name: 'testProgram',
+        pdas: [
+            pdaNode({
+                name: 'pool',
+                programId: '11111111111111111111111111111111',
+                seeds: [variablePdaSeedNode('market', publicKeyTypeNode())],
+            }),
+            pdaNode({
+                name: 'authority',
+                programId: '11111111111111111111111111111111',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'authority')],
+            }),
+        ],
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'instructions/migrate.rs').content;
+    const poolPda = getFromRenderMap(renderMap, 'pdas/pool.rs').content;
+
+    // Then the variable-seed finder and the builder both take the seed alone; the pin already resolved the program.
+    codeContains(poolPda, [/pub fn find_pool_pda\(\s*market: &Address,\s*\) -> \(solana_address::Address, u8\)/]);
+    codeDoesNotContains(poolPda, ['program_address: &solana_address::Address,']);
+    codeContains(content, [/crate::pdas::find_pool_pda\(\s*&self\.market,\s*\)\.0/]);
+    codeDoesNotContains(content, ['&self.amm_program,']);
+
+    // And the constant-seed one folds outright, so the builder reads its constant.
+    codeContains(content, ['crate::pdas::AUTHORITY_ADDRESS']);
+    codeDoesNotContains(content, ['find_authority_pda(']);
 });
 
 test('it derives linked PDAs with a dynamic programId from an argument reference', () => {

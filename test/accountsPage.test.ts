@@ -96,7 +96,7 @@ test('it renders a numeric seed as little-endian bytes', () => {
     ]);
 });
 
-test('it renders an empty array of seeds for seedless PDAs', () => {
+test('it folds the address of a seedless PDA into the account finder', () => {
     // Given the following program with 1 account and 1 pda with empty seeds.
     const node = programNode({
         accounts: [
@@ -117,9 +117,13 @@ test('it renders an empty array of seeds for seedless PDAs', () => {
     // When we render it.
     const renderMap = visit(node, getRenderMapVisitor());
 
-    // Then we expect the following identifier and reference to the byte array
-    // as a parameters to be rendered.
-    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [/pub fn find_pda\(/, /&\[\s*\]/]);
+    // Then the finder returns the derivation of the empty seed list, and `create_pda`
+    // still derives at runtime from the bump alone.
+    codeContains(getFromRenderMap(renderMap, 'accounts/test_account.rs').content, [
+        /pub const fn find_pda\(\) -> \(solana_address::Address, u8\)/,
+        /pub fn create_pda\(/,
+        /&\[\s*&\[bump\],\s*\]/,
+    ]);
 });
 
 test('it renders constant PDA seeds as prefix consts', () => {
@@ -585,7 +589,118 @@ test('it keeps account PDA helpers when the runtime program reference resolves',
     // When we render it, then generation succeeds and the helpers derive under the pin.
     const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'accounts/pool_state.rs').content;
     codeContains(content, [
-        'pub fn find_pda(',
+        'pub const fn find_pda(',
         '&solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"),',
     ]);
+});
+
+test('it folds the inherent finder of a constant-only account PDA', () => {
+    // Given an account whose PDA has only constant seeds.
+    const node = programNode({
+        accounts: [accountNode({ discriminators: [], name: 'authority', pda: pdaLinkNode('authority') })],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'authority',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'vault_auth_seed')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'accounts/authority.rs').content;
+
+    // Then the inherent finder returns the address the standalone helper folds to, without
+    // deriving it again — the page stays self-contained, holding the literal rather than the const.
+    codeContains(content, [
+        'pub const fn find_pda() -> (solana_address::Address, u8)',
+        '(solana_address::address!("WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh"), 250)',
+    ]);
+    codeDoesNotContains(content, ['Address::find_program_address(']);
+    // And `create_pda` still derives at runtime, since it takes any bump.
+    codeContains(content, ['pub fn create_pda(', 'create_program_address']);
+});
+
+test('it keeps the inherent finder deriving when the account PDA takes a seed', () => {
+    // Given an account whose PDA mixes a constant and a caller-supplied seed.
+    const node = programNode({
+        accounts: [accountNode({ discriminators: [], name: 'record', pda: pdaLinkNode('record') })],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'record',
+                seeds: [
+                    constantPdaSeedNodeFromString('utf8', 'record'),
+                    variablePdaSeedNode('owner', publicKeyTypeNode()),
+                ],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'accounts/record.rs').content;
+
+    // Then the finder is unchanged: it takes the seed and derives at runtime.
+    codeContains(content, ['pub fn find_pda(', 'owner: &Address,', 'Address::find_program_address(']);
+    codeDoesNotContains(content, ['pub const fn find_pda(']);
+});
+
+test('it folds a PDA pinned to this program even though every use-site passes one', () => {
+    // Given a self-pinned PDA whose only use-site supplies its own deriving program.
+    const node = programNode({
+        accounts: [accountNode({ name: 'poolState', pda: pdaLinkNode('poolState') })],
+        instructions: [
+            instructionNode({
+                accounts: [
+                    instructionAccountNode({
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'cpswapProgram',
+                    }),
+                    instructionAccountNode({
+                        defaultValue: pdaValueNode(pdaLinkNode('poolState'), [], accountValueNode('cpswapProgram')),
+                        isOptional: false,
+                        isSigner: false,
+                        isWritable: false,
+                        name: 'poolState',
+                    }),
+                ],
+                name: 'migrate',
+            }),
+        ],
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'poolState',
+                programId: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+                seeds: [constantPdaSeedNodeFromString('utf8', 'pool')],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'accounts/pool_state.rs').content;
+
+    // Then the account keeps its inherent helpers and folds under the pin.
+    codeContains(content, ['pub fn create_pda(', 'pub const fn find_pda() -> (solana_address::Address, u8)']);
+    codeDoesNotContains(content, ['which takes the deriving program as a parameter']);
+
+    // And the standalone page agrees: it knows the program, so it takes no parameter and folds too.
+    const pdaContent = getFromRenderMap(renderMap, 'pdas/pool_state.rs').content;
+    codeContains(pdaContent, [
+        'pub const POOL_STATE_ADDRESS',
+        /pub const POOL_STATE_BUMP: u8 = \d+;/,
+        'pub const fn find_pool_state_pda() -> (solana_address::Address, u8)',
+    ]);
+    codeDoesNotContains(pdaContent, ['program_address: &solana_address::Address,']);
+
+    // And the builder reads the constant rather than passing a program the finder cannot accept.
+    const ixContent = getFromRenderMap(renderMap, 'instructions/migrate.rs').content;
+    codeContains(ixContent, ['crate::pdas::POOL_STATE_ADDRESS']);
+    codeDoesNotContains(ixContent, ['find_pool_state_pda(']);
 });

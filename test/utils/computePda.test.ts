@@ -24,7 +24,7 @@ import {
 import { getBase16Encoder, getBase58Encoder, getBase64Encoder, getUtf8Encoder } from '@solana/codecs-strings';
 import { describe, expect, test } from 'vitest';
 
-import { computePdaAddress, findProgramAddress } from '../../src/utils/computePda';
+import { computePdaAddress, computePdaDerivation, findProgramAddress } from '../../src/utils/computePda';
 
 const AMM_PROGRAM = '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8';
 const LAN_PROGRAM = 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj';
@@ -85,6 +85,60 @@ describe('golden values', () => {
             address: 'BJPeChFSL6WVp6pZC5ikmfznPSDPQRzyszD6TWNQxLmR',
             bump: 251,
         });
+    });
+});
+
+describe('computePdaDerivation', () => {
+    test('it returns the known launchpad authority address and bump', () => {
+        // Given the raydium launchpad program and its well-known vault authority seed.
+        const seeds = [constantPdaSeedNodeFromString('utf8', 'vault_auth_seed')];
+
+        // When we derive it at generation time.
+        const derivation = computePdaDerivation(seeds, LAN_PROGRAM);
+
+        // Then we get the published address together with the bump it was found at.
+        expect(derivation).toEqual({ address: 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh', bump: 250 });
+    });
+
+    test('it returns the known amm authority address and bump', () => {
+        // Given a second published PDA, so the bump is not a constant 255.
+        const derivation = computePdaDerivation([constantPdaSeedNodeFromString('utf8', 'amm authority')], AMM_PROGRAM);
+
+        // Then both halves match the published values.
+        expect(derivation).toEqual({ address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1', bump: 254 });
+    });
+
+    test('it returns a bump for a seedless derivation', () => {
+        // Given no seeds at all, which is still a valid derivation.
+        const derivation = computePdaDerivation([], TOKEN_PROGRAM);
+
+        // Then the bump comes back alongside the address.
+        expect(derivation).toEqual({ address: deriveAddress([], TOKEN_PROGRAM), bump: 255 });
+    });
+
+    test('it agrees with computePdaAddress on the address', () => {
+        // Given a mixed-seed PDA that folds.
+        const seeds = [
+            constantPdaSeedNodeFromString('utf8', 'config'),
+            constantPdaSeedNode(numberTypeNode('u64'), numberValueNode(42)),
+        ];
+
+        // Then the wrapper returns exactly the address half of the derivation.
+        expect(computePdaAddress(seeds, TOKEN_PROGRAM)).toBe(computePdaDerivation(seeds, TOKEN_PROGRAM)?.address);
+    });
+
+    test('it returns null under the same guards as computePdaAddress', () => {
+        // Given inputs that trip each guard: too many seeds, an over-long seed, a bad program.
+        const tooManySeeds = Array.from({ length: 16 }, () => constantPdaSeedNodeFromString('utf8', 'x'));
+        const longSeed = [constantPdaSeedNodeFromString('utf8', 'a'.repeat(33))];
+        const variableSeed = [variablePdaSeedNode('mint', publicKeyTypeNode())];
+
+        // Then nothing is folded, matching what the address-only wrapper reports.
+        expect(computePdaDerivation(tooManySeeds, TOKEN_PROGRAM)).toBeNull();
+        expect(computePdaDerivation(longSeed, TOKEN_PROGRAM)).toBeNull();
+        expect(computePdaDerivation(variableSeed, TOKEN_PROGRAM)).toBeNull();
+        expect(computePdaDerivation([constantPdaSeedNodeFromString('utf8', 'x')], 'abc')).toBeNull();
+        expect(computePdaAddress(tooManySeeds, TOKEN_PROGRAM)).toBeNull();
     });
 });
 

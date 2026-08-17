@@ -13,6 +13,11 @@ pub const EVENT_AUTHORITY_SEED: &'static [u8] = &[
 
 pub const EVENT_AUTHORITY_ADDRESS: solana_address::Address =
     solana_address::address!("2DPAtwB8L12vrMRExbLuyGnC7n2J5LNoZQSejeQGpwkr");
+
+pub const EVENT_AUTHORITY_BUMP: u8 = 255;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const EVENT_AUTHORITY_SIGNER_SEEDS: &[&[u8]] = &[EVENT_AUTHORITY_SEED, &[EVENT_AUTHORITY_BUMP]];
 pub fn create_event_authority_pda(
     bump: u8,
 ) -> Result<solana_address::Address, solana_address::error::AddressError> {
@@ -21,6 +26,8 @@ pub fn create_event_authority_pda(
         &RAYDIUM_LAUNCHPAD_ID,
     )
 }
-pub fn find_event_authority_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(&[EVENT_AUTHORITY_SEED], &RAYDIUM_LAUNCHPAD_ID)
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &RAYDIUM_LAUNCHPAD_ID)`.
+pub const fn find_event_authority_pda() -> (solana_address::Address, u8) {
+    (EVENT_AUTHORITY_ADDRESS, EVENT_AUTHORITY_BUMP)
 }

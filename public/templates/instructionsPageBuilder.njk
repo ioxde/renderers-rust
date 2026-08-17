@@ -158,7 +158,7 @@ impl {{ instruction.name | pascalCase }}Builder {
   pub fn instruction(&self) -> solana_instruction::Instruction {
     {% for account in resolvedAccounts %}
       {% if account.pdaDefault %}
-        {% if account.pdaDefault.isLinked and not account.pdaDefault.hasVariableSeeds and not account.pdaDefault.hasDynamicProgram %}
+        {% if account.pdaDefault.isLinked and account.pdaDefault.isFolded %}
           {% if account.isSigner === 'either' %}
     let {{ account.name | snakeCase }} = self.{{ account.name | snakeCase }}.map(|(k, _)| k).unwrap_or(
           {% else %}

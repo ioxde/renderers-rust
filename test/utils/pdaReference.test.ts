@@ -220,6 +220,49 @@ test.each(PDA_FIXTURES)('it keeps the $name seed constant in step with the folde
     expect(Array.from(parseRustByteLiteral(renderedSeed))).toEqual(Array.from(new TextEncoder().encode(fixture.seed)));
 });
 
+test.each(PDA_FIXTURES)('it bakes the $name bump the independent derivation found', (fixture: PdaFixture) => {
+    // Given the same PDA, whose bump the generator folds alongside the address.
+    const constantPrefix = snakeCase(fixture.name).toUpperCase();
+    const content = renderPda(fixture);
+
+    // When we read the bump constant back.
+    const renderedBump = extractConstant(
+        content,
+        new RegExp(`pub const ${constantPrefix}_BUMP: u8 = (\\d+);`),
+        `${constantPrefix}_BUMP`,
+    );
+
+    // Then it is the bump the reference derivation stopped at, so `create_*_pda` and the folded
+    // address agree — a wrong bump derives a different address, or none at all.
+    const derivingProgram = fixture.pinnedProgram ?? fixture.localProgram;
+    const reference = referenceFindProgramAddress([new TextEncoder().encode(fixture.seed)], derivingProgram);
+    expect(Number(renderedBump)).toBe(reference.bump);
+    expect(Number(renderedBump)).toBe(fixture.expectedBump);
+});
+
+test.each(PDA_FIXTURES)('it signs $name with the seed constants it emits', (fixture: PdaFixture) => {
+    // Given the same PDA, whose signer seeds must re-state the derivation for `invoke_signed`.
+    const constantPrefix = snakeCase(fixture.name).toUpperCase();
+    const content = renderPda(fixture);
+
+    // When we read back the seed constants it declares, in declaration order.
+    const seedConstantNames = [
+        ...content.matchAll(new RegExp(`pub const (${constantPrefix}_SEED(?:_\\d+)?): `, 'g')),
+    ].map(match => match[1]);
+    const signerSeeds = extractConstant(
+        content,
+        new RegExp(`pub const ${constantPrefix}_SIGNER_SEEDS: &\\[&\\[u8\\]\\] = &\\[([\\s\\S]*?)\\n\\];`),
+        `${constantPrefix}_SIGNER_SEEDS`,
+    )
+        .split(',')
+        .map(entry => entry.trim())
+        .filter(entry => entry.length > 0);
+
+    // Then it lists every seed in order, then the bump — the tail `create_program_address` expects.
+    expect(seedConstantNames.length).toBeGreaterThan(0);
+    expect(signerSeeds).toEqual([...seedConstantNames, `&[${constantPrefix}_BUMP]`]);
+});
+
 test('the reference derivation is seed-sensitive', () => {
     // Given the seeds of two fixtures that derive under the same program.
     const authority = referenceFindProgramAddress([new TextEncoder().encode('vault_auth_seed')], RAYDIUM_LAUNCHPAD);

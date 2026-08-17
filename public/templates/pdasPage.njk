@@ -17,10 +17,20 @@ pub const {{ pda.name | snakeCase | upper }}_SEED{% if constantSeeds.length > 1 
     {% set constantIndex = constantIndex + 1 %}
   {% endif %}
 {% endfor %}
-{% if precomputedAddress %}
+{% if precomputed %}
 
 pub const {{ pda.name | snakeCase | upper }}_ADDRESS: solana_address::Address =
-    solana_address::address!("{{ precomputedAddress }}");
+    solana_address::address!("{{ precomputed.address }}");
+
+pub const {{ pda.name | snakeCase | upper }}_BUMP: u8 = {{ precomputed.bump }};
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const {{ pda.name | snakeCase | upper }}_SIGNER_SEEDS: &[&[u8]] = &[
+    {% for signerSeed in signerSeeds %}
+    {{ signerSeed }},
+    {% endfor %}
+    &[{{ pda.name | snakeCase | upper }}_BUMP],
+];
 {% endif %}
 {% if canonicalProgramAddress %}
 
@@ -64,6 +74,14 @@ pub fn create_{{ pda.name | snakeCase }}_pda(
     )
 }
 
+{%- if precomputed %}
+{{- macros.docblock(pda.docs) -}}
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &{{ pda.name | snakeCase | upper }}_PROGRAM_ADDRESS)`.
+pub const fn find_{{ pda.name | snakeCase }}_pda() -> (solana_address::Address, u8) {
+    ({{ pda.name | snakeCase | upper }}_ADDRESS, {{ pda.name | snakeCase | upper }}_BUMP)
+}
+{%- else %}
 {{- macros.docblock(pda.docs) -}}
 pub fn find_{{ pda.name | snakeCase }}_pda(
 {% if hasVariableSeeds %}
@@ -99,6 +117,7 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
         &{{ pda.name | snakeCase | upper }}_PROGRAM_ADDRESS,
     )
 }
+{% endif %}
 {% elif dynamicProgramOnly %}
 
 {# No pin and a runtime-only deriving program, so callers pass it in. #}
@@ -219,6 +238,14 @@ pub fn create_{{ pda.name | snakeCase }}_pda(
     )
 }
 
+{%- if precomputed %}
+{{- macros.docblock(pda.docs) -}}
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &{{ program.name | snakeCase | upper }}_ID)`.
+pub const fn find_{{ pda.name | snakeCase }}_pda() -> (solana_address::Address, u8) {
+    ({{ pda.name | snakeCase | upper }}_ADDRESS, {{ pda.name | snakeCase | upper }}_BUMP)
+}
+{%- else %}
 {{- macros.docblock(pda.docs) -}}
 pub fn find_{{ pda.name | snakeCase }}_pda(
 {% if hasVariableSeeds %}
@@ -260,6 +287,7 @@ pub fn find_{{ pda.name | snakeCase }}_pda(
         {% endif %}
     )
 }
+{% endif %}
 {% endif %}
 
 {% endblock %}

@@ -11,6 +11,11 @@ pub const GLOBAL_CONFIG_SEED: &'static [u8] = b"global_config";
 
 pub const GLOBAL_CONFIG_ADDRESS: solana_address::Address =
     solana_address::address!("9gM2qHs9cK8n6DoWe2HsoVjhJzsW9jt4je7r6NNtgRsG");
+
+pub const GLOBAL_CONFIG_BUMP: u8 = 254;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const GLOBAL_CONFIG_SIGNER_SEEDS: &[&[u8]] = &[GLOBAL_CONFIG_SEED, &[GLOBAL_CONFIG_BUMP]];
 /// A PDA with only constant seeds — address is deterministic.
 pub fn create_global_config_pda(
     bump: u8,
@@ -18,6 +23,8 @@ pub fn create_global_config_pda(
     solana_address::Address::create_program_address(&[GLOBAL_CONFIG_SEED, &[bump]], &DUMMY_ID)
 }
 /// A PDA with only constant seeds — address is deterministic.
-pub fn find_global_config_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(&[GLOBAL_CONFIG_SEED], &DUMMY_ID)
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &DUMMY_ID)`.
+pub const fn find_global_config_pda() -> (solana_address::Address, u8) {
+    (GLOBAL_CONFIG_ADDRESS, GLOBAL_CONFIG_BUMP)
 }

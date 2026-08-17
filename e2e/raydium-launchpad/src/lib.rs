@@ -103,6 +103,47 @@ mod tests {
             "lock_authority"
         );
     }
+
+    /// A folded finder is only correct if it is what the syscall would have returned; deriving
+    /// on-chain costs 1,500 CU per bump attempt, which is why it is folded in the first place.
+    #[test]
+    fn folded_finders_return_the_runtime_derivation() {
+        assert_eq!(
+            crate::pdas::find_authority_pda(),
+            Address::find_program_address(&[crate::pdas::AUTHORITY_SEED], &crate::ID),
+            "authority derives under this program"
+        );
+        assert_eq!(
+            crate::pdas::find_cpswap_authority_pda(),
+            Address::find_program_address(
+                &[crate::pdas::CPSWAP_AUTHORITY_SEED],
+                &crate::pdas::CPSWAP_AUTHORITY_PROGRAM_ADDRESS,
+            ),
+            "cpswap_authority derives under the program it is pinned to"
+        );
+    }
+
+    /// The folded constants are usable where a runtime derivation is not.
+    const _FOLDED_IN_CONST_CONTEXT: (Address, u8) = crate::pdas::find_authority_pda();
+
+    #[test]
+    fn folded_signer_seeds_recreate_the_folded_address() {
+        assert_eq!(
+            Address::create_program_address(crate::pdas::AUTHORITY_SIGNER_SEEDS, &crate::ID)
+                .unwrap(),
+            crate::pdas::AUTHORITY_ADDRESS,
+            "authority signs for itself"
+        );
+        assert_eq!(
+            Address::create_program_address(
+                crate::pdas::CPSWAP_AUTHORITY_SIGNER_SEEDS,
+                &crate::pdas::CPSWAP_AUTHORITY_PROGRAM_ADDRESS,
+            )
+            .unwrap(),
+            crate::pdas::CPSWAP_AUTHORITY_ADDRESS,
+            "cpswap_authority signs under its pin"
+        );
+    }
 }
 
 #[cfg(test)]

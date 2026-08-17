@@ -13,6 +13,11 @@ pub const AMM_CONFIG_SEED: &'static [u8] = &[
 pub const AMM_CONFIG_ADDRESS: solana_address::Address =
     solana_address::address!("9DCxsMizn3H1hprZ7xWe6LDzeUeZBksYFpBWBtSf1PQX");
 
+pub const AMM_CONFIG_BUMP: u8 = 255;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const AMM_CONFIG_SIGNER_SEEDS: &[&[u8]] = &[AMM_CONFIG_SEED, &[AMM_CONFIG_BUMP]];
+
 pub const AMM_CONFIG_PROGRAM_ADDRESS: solana_address::Address =
     solana_address::address!("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
 pub fn create_amm_config_pda(
@@ -23,6 +28,8 @@ pub fn create_amm_config_pda(
         &AMM_CONFIG_PROGRAM_ADDRESS,
     )
 }
-pub fn find_amm_config_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(&[AMM_CONFIG_SEED], &AMM_CONFIG_PROGRAM_ADDRESS)
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &AMM_CONFIG_PROGRAM_ADDRESS)`.
+pub const fn find_amm_config_pda() -> (solana_address::Address, u8) {
+    (AMM_CONFIG_ADDRESS, AMM_CONFIG_BUMP)
 }

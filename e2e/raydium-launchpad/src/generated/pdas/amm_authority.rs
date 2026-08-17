@@ -11,6 +11,11 @@ pub const AMM_AUTHORITY_SEED: &'static [u8] =
 pub const AMM_AUTHORITY_ADDRESS: solana_address::Address =
     solana_address::address!("5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1");
 
+pub const AMM_AUTHORITY_BUMP: u8 = 254;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const AMM_AUTHORITY_SIGNER_SEEDS: &[&[u8]] = &[AMM_AUTHORITY_SEED, &[AMM_AUTHORITY_BUMP]];
+
 pub const AMM_AUTHORITY_PROGRAM_ADDRESS: solana_address::Address =
     solana_address::address!("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
 pub fn create_amm_authority_pda(
@@ -21,9 +26,8 @@ pub fn create_amm_authority_pda(
         &AMM_AUTHORITY_PROGRAM_ADDRESS,
     )
 }
-pub fn find_amm_authority_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(
-        &[AMM_AUTHORITY_SEED],
-        &AMM_AUTHORITY_PROGRAM_ADDRESS,
-    )
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &AMM_AUTHORITY_PROGRAM_ADDRESS)`.
+pub const fn find_amm_authority_pda() -> (solana_address::Address, u8) {
+    (AMM_AUTHORITY_ADDRESS, AMM_AUTHORITY_BUMP)
 }

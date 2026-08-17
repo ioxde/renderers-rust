@@ -283,11 +283,26 @@ export function getConstantPdaSeedBytes(seed: ConstantPdaSeedNode, programAddres
 }
 
 /**
- * Computes the base58 PDA address at codegen time for PDAs with only constant seeds.
+ * Derives the address and bump at codegen time for PDAs with only constant seeds.
  * `null` also covers seeds that encode fine but exceed what the runtime derives from (more than 15,
- * or one over 32 bytes), so it is not an error: callers still render helpers, minus the constant.
+ * or one over 32 bytes), so it is not an error: callers still render helpers, minus the constants.
+ *
+ * @param seeds - The PDA's seeds; a single variable seed makes the derivation caller-dependent.
+ * @param programAddress - The base58 program the PDA derives under.
+ * @return The folded `{ address, bump }`, or `null` when nothing can be folded.
+ *
+ * @example
+ * ```ts
+ * computePdaDerivation([constantPdaSeedNodeFromString('utf8', 'vault_auth_seed')], programAddress);
+ * // { address: 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh', bump: 250 }
+ * ```
+ *
+ * @see {@link computePdaAddress}
  */
-export function computePdaAddress(seeds: readonly PdaSeedNode[], programAddress: string): string | null {
+export function computePdaDerivation(
+    seeds: readonly PdaSeedNode[],
+    programAddress: string,
+): { address: string; bump: number } | null {
     if (seeds.length > MAX_SEEDS_WITH_BUMP) return null;
 
     const programId = decodeAddress(programAddress);
@@ -301,5 +316,16 @@ export function computePdaAddress(seeds: readonly PdaSeedNode[], programAddress:
         seedBytes.push(encoded.bytes);
     }
 
-    return findProgramAddress(seedBytes, programId)?.address ?? null;
+    return findProgramAddress(seedBytes, programId);
+}
+
+/**
+ * The address half of {@link computePdaDerivation}, for callers that fold the address alone.
+ *
+ * @param seeds - The PDA's seeds; a single variable seed makes the derivation caller-dependent.
+ * @param programAddress - The base58 program the PDA derives under.
+ * @return The folded base58 address, or `null` when nothing can be folded.
+ */
+export function computePdaAddress(seeds: readonly PdaSeedNode[], programAddress: string): string | null {
+    return computePdaDerivation(seeds, programAddress)?.address ?? null;
 }

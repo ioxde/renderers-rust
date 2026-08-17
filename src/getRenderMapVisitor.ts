@@ -19,6 +19,7 @@ import {
     isNodeFilter,
     pascalCase,
     type PdaNode,
+    type PdaSeedNode,
     type PdaValueNode,
     type ProgramNode,
     resolveNestedTypeNode,
@@ -45,7 +46,7 @@ import { ImportMap } from './ImportMap';
 import { renderValueNode } from './renderValueNodeVisitor';
 import {
     CargoDependencies,
-    computePdaAddress,
+    computePdaDerivation,
     constantDiscriminatorName,
     constantValueSize,
     Fragment,
@@ -161,16 +162,21 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         .filter(seed => !isNode(seed.value, 'programIdValueNode'));
 
                     const localProgramIdExpr = `crate::${snakeCase(program.name).toUpperCase()}_ID`;
-                    // No pin and no nameable program: an inherent method has no parameter to take
-                    // one, so the helpers are omitted rather than derived under the wrong program.
-                    const derivingProgramIsRuntimeOnly =
-                        !!pda && !pda.programId && getDynamicProgramOnlyPdas(program).has(pda.name as string);
-                    // Must pick the same deriving program as visitPda, or the inherent and the
-                    // standalone `pdas/` helpers return different addresses for one PDA.
-                    const pdaProgramExpr =
-                        pda?.programId && pda.programId !== program.publicKey
-                            ? `solana_address::address!("${pda.programId}")`
-                            : localProgramIdExpr;
+                    // The one decision, shared with visitPda and the instruction builders: the
+                    // inherent and the standalone `pdas/` helpers must derive one PDA one way.
+                    const derivingProgram = pda ? getPdaDerivingProgram(pda, program) : undefined;
+                    // No nameable program: an inherent method has no parameter to take one, so the
+                    // helpers are omitted rather than derived under the wrong program.
+                    const derivingProgramIsRuntimeOnly = !!pda && !derivingProgram?.derivingProgramAddress;
+                    const pdaProgramExpr = derivingProgram?.canonicalProgramAddress
+                        ? `solana_address::address!("${derivingProgram.canonicalProgramAddress}")`
+                        : localProgramIdExpr;
+                    // Same seeds and same deriving program as `pdaProgramExpr`, so the inherent
+                    // helper folds to the address `crate::pdas` folds to.
+                    const precomputed =
+                        !hasVariableSeeds && derivingProgram?.derivingProgramAddress
+                            ? (computePdaDerivation(pdaSeeds, derivingProgram.derivingProgramAddress) ?? undefined)
+                            : undefined;
 
                     const accountDocs = [...(node.docs ?? [])];
                     if (derivingProgramIsRuntimeOnly) {
@@ -208,6 +214,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             imports: imports.toString(dependencyMap),
                             pda,
                             pdaProgramExpr,
+                            precomputed,
                             program,
                             seeds,
                             typeManifest,
@@ -550,23 +557,24 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
 
                     const programAddress = node.programId ?? program?.publicKey;
 
-                    // A pin (Anchor's `seeds::program`) decides the deriving program on its own,
-                    // whatever the use-sites say.
-                    const canonicalProgramAddress =
-                        node.programId && node.programId !== program.publicKey ? node.programId : undefined;
-                    // Unpinned, and every use-site supplies its own program, so the helpers take one
-                    // as a parameter.
-                    const dynamicProgramOnly = getDynamicProgramOnlyPdas(program).has(node.name as string);
+                    const { canonicalProgramAddress, derivingProgramAddress, dynamicProgramOnly } =
+                        getPdaDerivingProgram(node, program);
 
-                    // Keep this branch order in sync with pdasPage.njk: pin, then runtime-only, then
-                    // this program. Undefined means only the caller knows it, so nothing folds.
-                    const derivingProgramAddress =
-                        canonicalProgramAddress ?? (dynamicProgramOnly ? undefined : programAddress);
-
-                    let precomputedAddress: string | undefined;
+                    let precomputed: { address: string; bump: number } | undefined;
                     if (!hasVariableSeeds && derivingProgramAddress) {
-                        precomputedAddress = computePdaAddress(nodeSeeds, derivingProgramAddress) ?? undefined;
+                        precomputed = computePdaDerivation(nodeSeeds, derivingProgramAddress) ?? undefined;
                     }
+                    // `<PDA>_SIGNER_SEEDS` must spell the very seeds the folded address derives from,
+                    // so it reuses the emitted `<PDA>_SEED*` constants rather than re-encoding.
+                    const signerSeeds = precomputed
+                        ? renderSignerSeedExprs(
+                              nodeSeeds,
+                              node.name,
+                              canonicalProgramAddress
+                                  ? `${snakeCase(node.name).toUpperCase()}_PROGRAM_ADDRESS`
+                                  : `crate::${snakeCase(program.name).toUpperCase()}_ID`,
+                          )
+                        : [];
 
                     // Template uses fully-qualified paths for return types and static methods,
                     // but variable seed types use the short form from the type manifest.
@@ -583,10 +591,11 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             hasVariableSeeds,
                             imports: imports.toString(dependencyMap),
                             pda: node,
-                            precomputedAddress,
+                            precomputed,
                             program,
                             programAddress,
                             seeds,
+                            signerSeeds,
                         }),
                         imports,
                     });
@@ -1056,8 +1065,8 @@ function assertNoAggregateNameCollisions(events: EventNode[], programNode: Progr
 }
 
 /**
- * Linked PDAs whose every use-site passes a dynamic programId. Their helpers
- * take the deriving program as a parameter (unless pinned to a foreign address).
+ * Linked PDAs whose every use-site passes a dynamic programId. Any pin, this program's included, overrides this:
+ * `getPdaDerivingProgram` skips pinned PDAs before consulting it.
  */
 function getDynamicProgramOnlyPdas(program: ProgramNode): Set<string> {
     const allUsagesDynamic = new Map<string, boolean>();
@@ -1071,6 +1080,32 @@ function getDynamicProgramOnlyPdas(program: ProgramNode): Set<string> {
         }
     }
     return new Set([...allUsagesDynamic.entries()].filter(([, allDynamic]) => allDynamic).map(([name]) => name));
+}
+
+/** How a PDA's deriving program was decided, in the terms `pdasPage.njk` renders. */
+type PdaDerivingProgram = {
+    /** A foreign pin, baked in as `<PDA>_PROGRAM_ADDRESS`; `undefined` when the PDA derives locally. */
+    canonicalProgramAddress: string | undefined;
+    /** The base58 program the helpers derive under, or `undefined` when only the caller knows it. */
+    derivingProgramAddress: string | undefined;
+    /** No usable program here: the helpers take one as a parameter instead. */
+    dynamicProgramOnly: boolean;
+};
+
+/**
+ * Precedence mirrors `pdasPage.njk`: foreign pin, then caller-supplied program, then this program. A self-pin is
+ * not canonical (`crate::<PROGRAM>_ID` already names it) yet beats caller-supplied: Codama resolved it against an
+ * address-constrained account, so both agree. Every folding site must ask here, else it folds what no helper returns.
+ */
+function getPdaDerivingProgram(pda: PdaNode, program: ProgramNode): PdaDerivingProgram {
+    const canonicalProgramAddress = pda.programId && pda.programId !== program.publicKey ? pda.programId : undefined;
+    const dynamicProgramOnly = !pda.programId && getDynamicProgramOnlyPdas(program).has(pda.name as string);
+    return {
+        canonicalProgramAddress,
+        derivingProgramAddress:
+            canonicalProgramAddress ?? (dynamicProgramOnly ? undefined : (pda.programId ?? program.publicKey)),
+        dynamicProgramOnly,
+    };
 }
 
 /** A Rust byte-string literal only accepts ASCII, so anything else has to render as a byte array. */
@@ -1123,6 +1158,32 @@ function renderConstantSeedBytes(seed: ConstantPdaSeedNode): string {
     return `&[${Array.from(encoded.bytes).join(', ')}]`;
 }
 
+/**
+ * The `&[u8]` expressions `<PDA>_SIGNER_SEEDS` lists, in seed order, for a PDA whose address folded.
+ * Naming mirrors `pdasPage.njk`: the seed constants it already emits, so the signer seeds and the
+ * folded address can only ever hash the same bytes. `AsRef::as_ref` is not `const`, so a program-id
+ * seed spells `&<program>.to_bytes()` instead.
+ */
+function renderSignerSeedExprs(seeds: readonly PdaSeedNode[], pdaName: string, programExpr: string): string[] {
+    const constantPrefix = `${snakeCase(pdaName).toUpperCase()}_SEED`;
+    const constantCount = seeds.filter(
+        seed => isNode(seed, 'constantPdaSeedNode') && !isNode(seed.value, 'programIdValueNode'),
+    ).length;
+    let constantIndex = 0;
+    return seeds.map(seed => {
+        // Folding implies every seed is constant, so a variable seed here cannot happen.
+        if (!isNode(seed, 'constantPdaSeedNode')) {
+            throw new Error(`[Rust] PDA [${pdaName}] cannot list signer seeds for a variable seed.`);
+        }
+        if (isNode(seed.value, 'programIdValueNode')) {
+            return `&${programExpr}.to_bytes()`;
+        }
+        const name = constantCount > 1 ? `${constantPrefix}_${constantIndex}` : constantPrefix;
+        constantIndex += 1;
+        return name;
+    });
+}
+
 function getConflictsForInstructionAccountsAndArgs(instruction: InstructionNode): string[] {
     const allNames = [
         ...(instruction.accounts ?? []).map(account => account.name),
@@ -1140,11 +1201,13 @@ type RenderedSeed = {
 
 type ResolvedPdaDefault = {
     /**
-     * True when the helper call needs a runtime program argument, i.e. the
-     * deriving program is dynamic and not address-pinned (pinned ones are baked in).
+     * The builder passes a runtime program: the use-site names one and the page could not settle the program
+     * itself. Any pin settles it, this program's included — mirror `derivingProgramAddress`, not the pin kind.
      */
     hasDynamicProgram: boolean;
     hasVariableSeeds: boolean;
+    /** The linked PDA page folded its address into `<PDA>_ADDRESS`, so the builder can read it. */
+    isFolded: boolean;
     isLinked: boolean;
     linkedPdaName?: string;
     programAddressExpr: string;
@@ -1557,16 +1620,22 @@ function resolveInstructionPdaDefaults(ctx: {
 
         const pdaHasVariableSeeds = pdaNode ? (pdaNode.seeds ?? []).some(s => isNode(s, 'variablePdaSeedNode')) : true;
 
-        // Pinned programs (pdaNode.programId) are baked into the generated
-        // helpers and _ADDRESS constant, so the builder passes no program arg.
-        const pinnedProgram =
-            renderAsLinked && pdaNode?.programId && pdaNode.programId !== program.publicKey
-                ? pdaNode.programId
-                : undefined;
+        // Only linked PDAs read the generated page's constants; an inline pdaNode renders its own
+        // derivation, so it never consults where that page would have derived from.
+        const derivingProgram = renderAsLinked && pdaNode ? getPdaDerivingProgram(pdaNode, program) : undefined;
+        // Whether the page could fold decides this: anything else reads a `_ADDRESS` it never emits.
+        const isFolded =
+            !!pdaNode &&
+            !pdaHasVariableSeeds &&
+            !!derivingProgram?.derivingProgramAddress &&
+            computePdaDerivation(pdaNode.seeds ?? [], derivingProgram.derivingProgramAddress) !== null;
 
         resolvedPdas[account.name] = {
-            hasDynamicProgram: !!dynamicProgramRef && !pinnedProgram,
+            // Mirrors the finder's signature: the page drops its program parameter once it knows the program,
+            // self-pin included.
+            hasDynamicProgram: !!dynamicProgramRef && !derivingProgram?.derivingProgramAddress,
             hasVariableSeeds: pdaHasVariableSeeds,
+            isFolded,
             isLinked: renderAsLinked,
             linkedPdaName,
             programAddressExpr,

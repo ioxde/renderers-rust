@@ -13,6 +13,12 @@ pub const CPSWAP_AUTHORITY_SEED: &'static [u8] = &[
 pub const CPSWAP_AUTHORITY_ADDRESS: solana_address::Address =
     solana_address::address!("GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL");
 
+pub const CPSWAP_AUTHORITY_BUMP: u8 = 253;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const CPSWAP_AUTHORITY_SIGNER_SEEDS: &[&[u8]] =
+    &[CPSWAP_AUTHORITY_SEED, &[CPSWAP_AUTHORITY_BUMP]];
+
 pub const CPSWAP_AUTHORITY_PROGRAM_ADDRESS: solana_address::Address =
     solana_address::address!("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C");
 pub fn create_cpswap_authority_pda(
@@ -23,9 +29,8 @@ pub fn create_cpswap_authority_pda(
         &CPSWAP_AUTHORITY_PROGRAM_ADDRESS,
     )
 }
-pub fn find_cpswap_authority_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(
-        &[CPSWAP_AUTHORITY_SEED],
-        &CPSWAP_AUTHORITY_PROGRAM_ADDRESS,
-    )
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &CPSWAP_AUTHORITY_PROGRAM_ADDRESS)`.
+pub const fn find_cpswap_authority_pda() -> (solana_address::Address, u8) {
+    (CPSWAP_AUTHORITY_ADDRESS, CPSWAP_AUTHORITY_BUMP)
 }

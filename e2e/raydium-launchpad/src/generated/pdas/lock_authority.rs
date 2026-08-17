@@ -13,6 +13,11 @@ pub const LOCK_AUTHORITY_SEED: &'static [u8] = &[
 pub const LOCK_AUTHORITY_ADDRESS: solana_address::Address =
     solana_address::address!("3f7GcQFG397GAaEnv51zR6tsTVihYRydnydDD1cXekxH");
 
+pub const LOCK_AUTHORITY_BUMP: u8 = 255;
+
+/// Signer seeds for `invoke_signed`; only the deriving program can sign with them.
+pub const LOCK_AUTHORITY_SIGNER_SEEDS: &[&[u8]] = &[LOCK_AUTHORITY_SEED, &[LOCK_AUTHORITY_BUMP]];
+
 pub const LOCK_AUTHORITY_PROGRAM_ADDRESS: solana_address::Address =
     solana_address::address!("LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE");
 pub fn create_lock_authority_pda(
@@ -23,9 +28,8 @@ pub fn create_lock_authority_pda(
         &LOCK_AUTHORITY_PROGRAM_ADDRESS,
     )
 }
-pub fn find_lock_authority_pda() -> (solana_address::Address, u8) {
-    solana_address::Address::find_program_address(
-        &[LOCK_AUTHORITY_SEED],
-        &LOCK_AUTHORITY_PROGRAM_ADDRESS,
-    )
+/// Precomputed at generation time; equal to
+/// `find_program_address(&[..], &LOCK_AUTHORITY_PROGRAM_ADDRESS)`.
+pub const fn find_lock_authority_pda() -> (solana_address::Address, u8) {
+    (LOCK_AUTHORITY_ADDRESS, LOCK_AUTHORITY_BUMP)
 }

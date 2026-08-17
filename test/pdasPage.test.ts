@@ -14,6 +14,7 @@ import {
     pdaNode,
     type PdaSeedNode,
     pdaValueNode,
+    programIdValueNode,
     programNode,
     publicKeyTypeNode,
     publicKeyValueNode,
@@ -89,7 +90,7 @@ test('it renders a PDA with only constant seeds', () => {
         'solana_address::address!("EdgDu3sEjDtMpJuDkG8VsWnKq16EYxTsuwCmSko3wZnR")',
         'pub fn create_config_pda_pda(',
         'bump: u8,',
-        'pub fn find_config_pda_pda(',
+        'pub const fn find_config_pda_pda(',
         ') -> (solana_address::Address, u8)',
     ]);
 });
@@ -662,4 +663,113 @@ test('it bakes an address that matches a decoded base58 seed constant', () => {
     codeContains(content, [`pub const MY_PDA_SEED: &'static [u8] = ${byteSliceLiteral(seedBytes)};`]);
     const expected = findProgramAddress([seedBytes], getBase58Encoder().encode(TEST_PROGRAM_ADDRESS) as Uint8Array);
     expect(extractBakedAddress(content, 'MY_PDA_ADDRESS')).toBe(expected?.address);
+});
+
+// A folded PDA answers `find_*_pda()` from the constants the binary already carries, instead of
+// paying `sol_try_find_program_address` (1,500 CU per bump attempt) for an answer it knows.
+
+test('it folds the finder of a constant-only PDA into its precomputed constants', () => {
+    // Given a PDA whose seeds are all constant.
+    const node = programWithSeeds(constantPdaSeedNodeFromString('utf8', 'vault_auth_seed'));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the address, the bump and the signer seeds are all constants, and the finder returns
+    // them without deriving anything at runtime.
+    codeContains(content, [
+        'pub const MY_PDA_ADDRESS: solana_address::Address =',
+        /pub const MY_PDA_BUMP: u8 = \d+;/,
+        'pub const MY_PDA_SIGNER_SEEDS: &[&[u8]] = &[',
+        'MY_PDA_SEED,',
+        '&[MY_PDA_BUMP],',
+        'pub const fn find_my_pda_pda() -> (solana_address::Address, u8)',
+        '(MY_PDA_ADDRESS, MY_PDA_BUMP)',
+    ]);
+    codeDoesNotContains(content, ['Address::find_program_address(']);
+    // And `create_my_pda_pda` still derives at runtime, since it takes any bump.
+    codeContains(content, ['pub fn create_my_pda_pda(', 'create_program_address']);
+});
+
+test('it renders a program id signer seed as its const-callable bytes', () => {
+    // Given a constant-only PDA that hashes the deriving program itself.
+    const node = programWithSeeds(
+        constantPdaSeedNodeFromString('utf8', 'metadata'),
+        constantPdaSeedNode(publicKeyTypeNode(), programIdValueNode()),
+    );
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the signer seed spells `to_bytes()`, since `AsRef::as_ref` is not a `const fn`.
+    codeContains(content, ['pub const MY_PDA_SIGNER_SEEDS: &[&[u8]] = &[', '&crate::MY_PROGRAM_ID.to_bytes(),']);
+    codeDoesNotContains(content, ['crate::MY_PROGRAM_ID.as_ref(),\n        &[MY_PDA_BUMP]']);
+});
+
+test('it folds a pinned PDA under the program it is pinned to', () => {
+    // Given a constant-only PDA pinned to a foreign program.
+    const node = programNode({
+        name: 'myProgram',
+        pdas: [
+            pdaNode({
+                name: 'cpswapAuthority',
+                programId: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+                seeds: [
+                    constantPdaSeedNodeFromString('utf8', 'vault_and_lp_mint_auth_seed'),
+                    constantPdaSeedNode(publicKeyTypeNode(), programIdValueNode()),
+                ],
+            }),
+        ],
+        publicKey: 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj',
+    });
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/cpswap_authority.rs').content;
+
+    // Then the folded constants and the signer seeds both name the pin, never this crate.
+    codeContains(content, [
+        /pub const CPSWAP_AUTHORITY_BUMP: u8 = \d+;/,
+        '&CPSWAP_AUTHORITY_PROGRAM_ADDRESS.to_bytes(),',
+        'pub const fn find_cpswap_authority_pda() -> (solana_address::Address, u8)',
+        '(CPSWAP_AUTHORITY_ADDRESS, CPSWAP_AUTHORITY_BUMP)',
+    ]);
+    codeDoesNotContains(content, ['MY_PROGRAM_ID', 'Address::find_program_address(']);
+});
+
+test('it keeps the runtime finder for a PDA with variable seeds', () => {
+    // Given a PDA the caller has to supply a seed for.
+    const node = programWithSeeds(
+        constantPdaSeedNodeFromString('utf8', 'metadata'),
+        variablePdaSeedNode('mint', publicKeyTypeNode()),
+    );
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then nothing folds: the finder still derives, and no bump or signer seeds are emitted.
+    codeContains(content, ['pub fn find_my_pda_pda(', 'Address::find_program_address(']);
+    codeDoesNotContains(content, ['pub const fn find_my_pda_pda', 'MY_PDA_BUMP', 'MY_PDA_SIGNER_SEEDS']);
+});
+
+test('it keeps the runtime finder when the seeds exceed what can be derived', () => {
+    // Given 16 constant seeds — one more than `find_program_address` can take with its bump.
+    const seeds = Array.from({ length: 16 }, (_, i) => constantPdaSeedNodeFromString('utf8', `s${i}`));
+    const node = programWithSeeds(...seeds);
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the finder stays runtime, and none of the folded constants are emitted.
+    codeContains(content, ['pub fn find_my_pda_pda(', 'Address::find_program_address(']);
+    codeDoesNotContains(content, [
+        'pub const fn find_my_pda_pda',
+        'pub const MY_PDA_ADDRESS',
+        'pub const MY_PDA_BUMP',
+        'pub const MY_PDA_SIGNER_SEEDS',
+    ]);
 });
