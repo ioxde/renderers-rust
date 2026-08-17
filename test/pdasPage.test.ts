@@ -1,6 +1,7 @@
 import {
     accountValueNode,
     bytesTypeNode,
+    bytesValueNode,
     constantPdaSeedNode,
     constantPdaSeedNodeFromBytes,
     constantPdaSeedNodeFromString,
@@ -11,18 +12,24 @@ import {
     numberValueNode,
     pdaLinkNode,
     pdaNode,
+    type PdaSeedNode,
     pdaValueNode,
     programNode,
     publicKeyTypeNode,
     publicKeyValueNode,
     rootNode,
+    sizePrefixTypeNode,
+    stringTypeNode,
+    stringValueNode,
     variablePdaSeedNode,
 } from '@codama/nodes';
 import { getFromRenderMap } from '@codama/renderers-core';
 import { visit } from '@codama/visitors-core';
-import { test } from 'vitest';
+import { getBase16Encoder, getBase58Encoder, getBase64Encoder } from '@solana/codecs-strings';
+import { expect, test } from 'vitest';
 
 import { getRenderMapVisitor } from '../src';
+import { findProgramAddress } from '../src/utils/computePda';
 import { codeContains, codeDoesNotContains } from './_setup';
 
 test('it renders a standalone PDA with variable seeds', () => {
@@ -397,4 +404,262 @@ test('it bakes the local program into helpers of same-program PDAs', () => {
     // Then the helpers derive under this crate's program — no program parameter.
     codeContains(content, [`pub fn find_my_pda_pda(`, `pub fn create_my_pda_pda(`, `&MY_PROGRAM_ID,`]);
     codeDoesNotContains(content, [`program_address:`, `_with_program`]);
+});
+
+// The folded `<PDA>_ADDRESS` and the `<PDA>_SEED` literal must encode every seed identically, or
+// generation must fail: a seed that is off by a byte derives an address the program never accepts.
+
+const TEST_PROGRAM_ADDRESS = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
+/** A program whose PDA always renders to `pdas/my_pda.rs`. */
+function programWithSeeds(...seeds: PdaSeedNode[]) {
+    return programNode({
+        name: 'myProgram',
+        pdas: [pdaNode({ name: 'myPda', seeds })],
+        publicKey: TEST_PROGRAM_ADDRESS,
+    });
+}
+
+function byteSliceLiteral(bytes: ArrayLike<number>): string {
+    return `&[${Array.from(bytes).join(', ')}]`;
+}
+
+/** The bytes a `&42u64.to_le_bytes()` seed constant must spell. */
+function u64LeBytes(value: bigint): Uint8Array {
+    const bytes = new Uint8Array(8);
+    new DataView(bytes.buffer).setBigUint64(0, value, true);
+    return bytes;
+}
+
+test('it refuses to render a size-prefixed constant string seed', () => {
+    // Given a constant seed whose type adds a u32 length prefix.
+    const node = programWithSeeds(
+        constantPdaSeedNode(
+            sizePrefixTypeNode(stringTypeNode('utf8'), numberTypeNode('u32')),
+            stringValueNode('config'),
+        ),
+    );
+
+    // Then generation fails rather than dropping the prefix and emitting an unreachable address.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a fixed-size constant string seed', () => {
+    // Given a constant seed padded/truncated to a fixed byte width.
+    const node = programWithSeeds(
+        constantPdaSeedNode(fixedSizeTypeNode(stringTypeNode('utf8'), 16), stringValueNode('config')),
+    );
+
+    // Then generation fails rather than emitting the unpadded bytes.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a fixed-size constant number seed', () => {
+    // Given a constant number seed wrapped in a fixed size.
+    const node = programWithSeeds(
+        constantPdaSeedNode(fixedSizeTypeNode(numberTypeNode('u64'), 16), numberValueNode(1)),
+    );
+
+    // Then generation fails with the constant-seed error, not the generic value-node error.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a size-prefixed constant bytes seed', () => {
+    // Given a constant bytes seed whose type adds a u32 length prefix.
+    const node = programWithSeeds(
+        constantPdaSeedNode(
+            sizePrefixTypeNode(bytesTypeNode(), numberTypeNode('u32')),
+            bytesValueNode('base16', 'deadbeef'),
+        ),
+    );
+
+    // Then generation fails rather than dropping the prefix.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a constant number seed that overflows its format', () => {
+    // Given a u8 seed holding 300, which rustc rejects as `literal out of range for u8`.
+    const node = programWithSeeds(constantPdaSeedNode(numberTypeNode('u8', 'le'), numberValueNode(300)));
+
+    // Then generation fails instead of emitting code that cannot compile.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a negative constant seed in an unsigned format', () => {
+    // Given a u64 seed holding -1, which rustc rejects as `cannot apply unary operator -`.
+    const node = programWithSeeds(constantPdaSeedNode(numberTypeNode('u64', 'le'), numberValueNode(-1)));
+
+    // Then generation fails instead of emitting code that cannot compile.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a constant publicKey seed that is not 32 bytes', () => {
+    // Given a publicKey seed whose base58 text does not decode to a 32-byte address.
+    const node = programWithSeeds(constantPdaSeedNode(publicKeyTypeNode(), publicKeyValueNode('abc')));
+
+    // Then generation fails instead of emitting a short byte slice.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it refuses to render a constant seed whose value does not match its type', () => {
+    // Given a numeric seed type carrying a string value.
+    const node = programWithSeeds(constantPdaSeedNode(numberTypeNode('u32'), stringValueNode('x')));
+
+    // Then generation fails instead of silently encoding it as utf8 text.
+    expect(() => visit(node, getRenderMapVisitor())).toThrow(/^\[Rust\] Cannot encode constant PDA seed/);
+});
+
+test('it decodes a base58 constant string seed into its bytes', () => {
+    // Given a constant string seed declared with the base58 encoding.
+    const text = 'GDDMwNyyx8uB6zrqwBFHjLLG3TBYk2F8Az4yrQC5RzMp';
+    const node = programWithSeeds(constantPdaSeedNodeFromString('base58', text));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the seed constant holds the decoded bytes, not the base58 text.
+    codeContains(content, [
+        `pub const MY_PDA_SEED: &'static [u8] = ${byteSliceLiteral(getBase58Encoder().encode(text))};`,
+    ]);
+    codeDoesNotContains(content, [`b"${text}"`]);
+});
+
+test('it decodes a base16 constant string seed into its bytes', () => {
+    // Given a constant string seed declared with the base16 encoding.
+    const text = 'deadbeef';
+    const node = programWithSeeds(constantPdaSeedNodeFromString('base16', text));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the seed constant holds the decoded bytes, not the hex text.
+    codeContains(content, [
+        `pub const MY_PDA_SEED: &'static [u8] = ${byteSliceLiteral(getBase16Encoder().encode(text))};`,
+    ]);
+    codeDoesNotContains(content, [`b"${text}"`]);
+});
+
+test('it decodes a base64 constant string seed into its bytes', () => {
+    // Given a constant string seed declared with the base64 encoding.
+    const text = 'SGVsbG8=';
+    const node = programWithSeeds(constantPdaSeedNodeFromString('base64', text));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the seed constant holds the decoded bytes, not the base64 text.
+    codeContains(content, [
+        `pub const MY_PDA_SEED: &'static [u8] = ${byteSliceLiteral(getBase64Encoder().encode(text))};`,
+    ]);
+    codeDoesNotContains(content, [`b"${text}"`]);
+});
+
+test('it omits the baked address when there are too many seeds to derive', () => {
+    // Given 16 constant seeds — `find_program_address` appends the bump, exceeding the 16-seed max.
+    const seeds = Array.from({ length: 16 }, (_, i) => constantPdaSeedNodeFromString('utf8', `s${i}`));
+    const node = programWithSeeds(...seeds);
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the page still renders working helpers, but no address is folded in.
+    codeContains(content, ['pub fn create_my_pda_pda(', 'pub fn find_my_pda_pda(', 'MY_PDA_SEED_15']);
+    codeDoesNotContains(content, ['pub const MY_PDA_ADDRESS']);
+});
+
+test('it bakes the address when the seed count is at the maximum', () => {
+    // Given 15 constant seeds, which leaves exactly one slot for the bump.
+    const seeds = Array.from({ length: 15 }, (_, i) => constantPdaSeedNodeFromString('utf8', `s${i}`));
+    const node = programWithSeeds(...seeds);
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the address is still folded in.
+    codeContains(content, ['pub const MY_PDA_ADDRESS']);
+});
+
+test('it omits the baked address when a seed is longer than 32 bytes', () => {
+    // Given a 40-byte constant seed, which `create_program_address` rejects.
+    const node = programWithSeeds(constantPdaSeedNodeFromString('utf8', 'a'.repeat(40)));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the page still renders working helpers, but no address is folded in.
+    codeContains(content, ['pub fn create_my_pda_pda(', 'pub fn find_my_pda_pda(', 'MY_PDA_SEED']);
+    codeDoesNotContains(content, ['pub const MY_PDA_ADDRESS']);
+});
+
+test('it bakes the address when a seed is exactly 32 bytes', () => {
+    // Given a 32-byte constant seed, which is the maximum a seed may be.
+    const node = programWithSeeds(constantPdaSeedNodeFromString('utf8', 'a'.repeat(32)));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the address is still folded in.
+    codeContains(content, ['pub const MY_PDA_ADDRESS']);
+});
+
+/** Pulls the base58 literal out of `pub const <NAME>: … address!("…")`. */
+function extractBakedAddress(content: string, constantName: string): string {
+    const match = new RegExp(
+        `pub const ${constantName}: solana_address::Address =\\s*solana_address::address!\\("([^"]+)"\\)`,
+    ).exec(content);
+    expect(match, `expected a baked ${constantName} constant`).not.toBeNull();
+    return (match as RegExpExecArray)[1];
+}
+
+test('it bakes an address that matches the seed constants it emits', () => {
+    // Given a PDA mixing a utf8 string, a u64 number and a publicKey constant seed.
+    const pubkey = '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8';
+    const node = programWithSeeds(
+        constantPdaSeedNodeFromString('utf8', 'config'),
+        constantPdaSeedNode(numberTypeNode('u64', 'le'), numberValueNode(42)),
+        constantPdaSeedNode(publicKeyTypeNode(), publicKeyValueNode(pubkey)),
+    );
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then each seed constant holds exactly the bytes we expect the program to hash.
+    const seedBytes = [
+        new TextEncoder().encode('config'),
+        u64LeBytes(42n),
+        getBase58Encoder().encode(pubkey) as Uint8Array,
+    ];
+    codeContains(content, [
+        `pub const MY_PDA_SEED_0: &'static [u8] = b"config";`,
+        `pub const MY_PDA_SEED_1: &'static [u8] = &42u64.to_le_bytes();`,
+        `pub const MY_PDA_SEED_2: &'static [u8] = ${byteSliceLiteral(seedBytes[2])};`,
+    ]);
+
+    // And the folded address is the one those very bytes derive.
+    const expected = findProgramAddress(seedBytes, getBase58Encoder().encode(TEST_PROGRAM_ADDRESS) as Uint8Array);
+    expect(extractBakedAddress(content, 'MY_PDA_ADDRESS')).toBe(expected?.address);
+});
+
+test('it bakes an address that matches a decoded base58 seed constant', () => {
+    // Given a base58-encoded constant string seed, whose text and decoded bytes differ.
+    const text = 'GDDMwNyyx8uB6zrqwBFHjLLG3TBYk2F8Az4yrQC5RzMp';
+    const node = programWithSeeds(constantPdaSeedNodeFromString('base58', text));
+
+    // When we render it.
+    const renderMap = visit(node, getRenderMapVisitor());
+    const content = getFromRenderMap(renderMap, 'pdas/my_pda.rs').content;
+
+    // Then the seed constant and the folded address are both built from the decoded bytes.
+    const seedBytes = getBase58Encoder().encode(text) as Uint8Array;
+    codeContains(content, [`pub const MY_PDA_SEED: &'static [u8] = ${byteSliceLiteral(seedBytes)};`]);
+    const expected = findProgramAddress([seedBytes], getBase58Encoder().encode(TEST_PROGRAM_ADDRESS) as Uint8Array);
+    expect(extractBakedAddress(content, 'MY_PDA_ADDRESS')).toBe(expected?.address);
 });

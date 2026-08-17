@@ -2,7 +2,6 @@ import { logWarn } from '@codama/errors';
 import {
     type ConstantPdaSeedNode,
     ConstantValueNode,
-    constantValueNode,
     definedTypeNode,
     type DiscriminatorNode,
     EventFraming,
@@ -40,7 +39,6 @@ import {
     staticVisitor,
     visit,
 } from '@codama/visitors-core';
-import { getBase58Encoder } from '@solana/codecs-strings';
 
 import { getTypeManifestVisitor } from './getTypeManifestVisitor';
 import { ImportMap } from './ImportMap';
@@ -52,12 +50,14 @@ import {
     constantValueSize,
     Fragment,
     getByteArrayDiscriminatorConstantName,
+    getConstantPdaSeedBytes,
     getDiscriminatorConditions,
     getDiscriminatorConstants,
     getImportFromFactory,
     type GetImportFromFunction,
     getTraitsFromNodeFactory,
     getUnconditionalDerivesFromNode,
+    isIntegerNumberFormat,
     LinkOverrides,
     render,
     renderByteCheck,
@@ -148,11 +148,12 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         if (isNode(seed.value, 'programIdValueNode')) {
                             return seed;
                         }
+                        // Encode before visiting: an unencodable seed must report its own error, not
+                        // whatever the manifest visitor says about the wrapper type.
+                        const seedBytesExpr = renderConstantSeedBytes(seed);
                         const seedManifest = visit(seed.type, typeManifestVisitor);
                         const resolvedType = resolveNestedTypeNode(seed.type);
-                        const seedBytes = renderConstantSeedBytes(seed, getImportFrom);
-                        seedsImports.mergeWith(seedBytes.imports);
-                        return { ...seed, resolvedType, seedBytesExpr: seedBytes.render, typeManifest: seedManifest };
+                        return { ...seed, resolvedType, seedBytesExpr, typeManifest: seedManifest };
                     });
                     const hasVariableSeeds = pdaSeeds.filter(isNodeFilter('variablePdaSeedNode')).length > 0;
                     const constantSeeds = seeds
@@ -534,11 +535,12 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         if (isNode(seed.value, 'programIdValueNode')) {
                             return seed;
                         }
+                        // Encode before visiting: an unencodable seed must report its own error, not
+                        // whatever the manifest visitor says about the wrapper type.
+                        const seedBytesExpr = renderConstantSeedBytes(seed);
                         const seedManifest = visit(seed.type, typeManifestVisitor);
                         const resolvedType = resolveNestedTypeNode(seed.type);
-                        const seedBytes = renderConstantSeedBytes(seed, getImportFrom);
-                        imports.mergeWith(seedBytes.imports);
-                        return { ...seed, resolvedType, seedBytesExpr: seedBytes.render, typeManifest: seedManifest };
+                        return { ...seed, resolvedType, seedBytesExpr, typeManifest: seedManifest };
                     });
 
                     const hasVariableSeeds = nodeSeeds.filter(isNodeFilter('variablePdaSeedNode')).length > 0;
@@ -1071,36 +1073,54 @@ function getDynamicProgramOnlyPdas(program: ProgramNode): Set<string> {
     return new Set([...allUsagesDynamic.entries()].filter(([, allDynamic]) => allDynamic).map(([name]) => name));
 }
 
+/** A Rust byte-string literal only accepts ASCII, so anything else has to render as a byte array. */
+function isPrintableAscii(text: string): boolean {
+    return /^[\x20-\x7e]*$/.test(text);
+}
+
 /**
- * Renders a constant PDA seed as a raw byte-slice expression suitable for
- * `find_program_address(&[...])`: `b"…"` for strings, `&[…]` for bytes, and
- * `&N.to_le_bytes()`-style for typed values. Shared by the PDA-helper pages
- * and the inline instruction-builder derivations.
+ * Renders a constant PDA seed as a `&[u8]` expression for `find_program_address(&[...])`, throwing
+ * rather than emit bytes it cannot encode exactly. The `b"…"` and `&42u64.to_le_bytes()` shortcuts
+ * must spell what {@link getConstantPdaSeedBytes} encodes, or they drift from `<PDA>_ADDRESS`.
  */
-function renderConstantSeedBytes(
-    seed: ConstantPdaSeedNode,
-    getImportFrom: GetImportFromFunction,
-): { imports: ImportMap; render: string } {
+function renderConstantSeedBytes(seed: ConstantPdaSeedNode): string {
     if (isNode(seed.value, 'programIdValueNode')) {
         // The program reference is context-dependent; callers render it themselves.
         throw new Error('programIdValueNode seeds must be rendered by the caller.');
     }
-    if (isNode(seed.value, 'stringValueNode')) {
-        const m = renderValueNode(seed.value, getImportFrom, true);
-        return { imports: m.imports, render: `b${m.render}` };
+
+    const { type, value } = seed;
+    const encoded = getConstantPdaSeedBytes(seed, null);
+    if (!encoded.ok) {
+        throw new Error(
+            `[Rust] Cannot encode constant PDA seed of type [${type.kind}] holding a [${value.kind}]: ` +
+                `${encoded.reason}. Seeds are hashed byte-for-byte, so the generator refuses rather ` +
+                'than emit helpers that derive an address the program never uses.',
+        );
     }
-    if (isNode(seed.value, 'bytesValueNode')) {
-        const m = renderValueNode(seed.value, getImportFrom, true);
-        return { imports: m.imports, render: `&${m.render}` };
+
+    // Only ASCII utf8 spells its own bytes; a base58/base16/base64 seed must render decoded bytes.
+    if (
+        isNode(type, 'stringTypeNode') &&
+        isNode(value, 'stringValueNode') &&
+        type.encoding === 'utf8' &&
+        isPrintableAscii(value.string)
+    ) {
+        return `b${JSON.stringify(value.string)}`;
     }
-    if (isNode(seed.value, 'publicKeyValueNode')) {
-        // Codama folds address-pinned program accounts used as seeds into
-        // constant publicKey seeds; emit the decoded 32 bytes.
-        const bytes = getBase58Encoder().encode(seed.value.publicKey);
-        return { imports: new ImportMap(), render: `&[${Array.from(bytes).join(', ')}]` };
+
+    if (isNode(type, 'numberTypeNode') && isNode(value, 'numberValueNode') && isIntegerNumberFormat(type.format)) {
+        const literal = value.number.toString();
+        // Past 1e21 `toString` switches to exponent notation, which is not a Rust literal.
+        if (/^-?\d+$/.test(literal)) {
+            const bytesMethod = type.endian === 'le' ? 'to_le_bytes' : 'to_be_bytes';
+            // `-1i64.to_le_bytes()` parses as `-(1i64.to_le_bytes())`, so negatives need parens.
+            const receiver = value.number < 0 ? `(${literal}${type.format})` : `${literal}${type.format}`;
+            return `&${receiver}.${bytesMethod}()`;
+        }
     }
-    const m = renderValueNode(constantValueNode(seed.type, seed.value), getImportFrom, true);
-    return { imports: m.imports, render: `&${m.render}` };
+
+    return `&[${Array.from(encoded.bytes).join(', ')}]`;
 }
 
 function getConflictsForInstructionAccountsAndArgs(instruction: InstructionNode): string[] {
@@ -1380,9 +1400,7 @@ function resolveInstructionPdaDefaults(ctx: {
                             render: `${programAddressExpr}.as_ref()`,
                         });
                     } else {
-                        const seedBytes = renderConstantSeedBytes(seed, getImportFrom);
-                        imports.mergeWith(seedBytes.imports);
-                        renderedSeeds.push({ kind: 'constant', render: seedBytes.render });
+                        renderedSeeds.push({ kind: 'constant', render: renderConstantSeedBytes(seed) });
                     }
                     continue;
                 }
