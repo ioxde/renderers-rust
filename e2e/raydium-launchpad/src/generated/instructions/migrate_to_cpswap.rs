@@ -242,7 +242,7 @@ impl Default for MigrateToCpswapInstructionData {
 ///   3. `[]` platform_config
 ///   4. `[optional]` cpswap_program (default to `CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C`)
 ///   5. `[writable]` cpswap_pool
-///   6. `[optional]` cpswap_authority (default to PDA derived from 'cpswapAuthority')
+///   6. `[]` cpswap_authority (fixed to 'GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL')
 ///   7. `[writable, optional]` cpswap_lp_mint (default to PDA derived from 'cpswapLpMint')
 ///   8. `[writable, optional]` cpswap_base_vault (default to PDA derived from 'cpswapBaseVault')
 ///   9. `[writable, optional]` cpswap_quote_vault (default to PDA derived from 'cpswapQuoteVault')
@@ -250,20 +250,20 @@ impl Default for MigrateToCpswapInstructionData {
 ///   11. `[writable]` cpswap_create_pool_fee
 ///   12. `[writable, optional]` cpswap_observation (default to PDA derived from 'cpswapObservation')
 ///   13. `[optional]` lock_program (default to `LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE`)
-///   14. `[optional]` lock_authority (default to PDA derived from 'lockAuthority')
+///   14. `[]` lock_authority (fixed to '3f7GcQFG397GAaEnv51zR6tsTVihYRydnydDD1cXekxH')
 ///   15. `[writable]` lock_lp_vault
-///   16. `[writable, optional]` authority (default to PDA derived from 'authority')
+///   16. `[writable]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   17. `[writable, optional]` pool_state (default to PDA derived from 'poolState')
 ///   18. `[]` global_config
 ///   19. `[writable]` base_vault
 ///   20. `[writable]` quote_vault
 ///   21. `[writable]` pool_lp_token
-///   22. `[optional]` base_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   23. `[optional]` quote_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   24. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-///   25. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   26. `[optional]` rent_program (default to `SysvarRent111111111111111111111111111111111`)
-///   27. `[optional]` metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
+///   22. `[]` base_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   23. `[]` quote_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   24. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+///   25. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   26. `[]` rent_program (fixed to 'SysvarRent111111111111111111111111111111111')
+///   27. `[]` metadata_program (fixed to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 #[derive(Clone, Debug)]
 pub struct MigrateToCpswapBuilder {
     payer: solana_address::Address,
@@ -272,7 +272,6 @@ pub struct MigrateToCpswapBuilder {
     platform_config: solana_address::Address,
     cpswap_program: Option<solana_address::Address>,
     cpswap_pool: solana_address::Address,
-    cpswap_authority: Option<solana_address::Address>,
     cpswap_lp_mint: Option<solana_address::Address>,
     cpswap_base_vault: Option<solana_address::Address>,
     cpswap_quote_vault: Option<solana_address::Address>,
@@ -280,20 +279,12 @@ pub struct MigrateToCpswapBuilder {
     cpswap_create_pool_fee: solana_address::Address,
     cpswap_observation: Option<solana_address::Address>,
     lock_program: Option<solana_address::Address>,
-    lock_authority: Option<solana_address::Address>,
     lock_lp_vault: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: Option<solana_address::Address>,
     global_config: solana_address::Address,
     base_vault: solana_address::Address,
     quote_vault: solana_address::Address,
     pool_lp_token: solana_address::Address,
-    base_token_program: Option<solana_address::Address>,
-    quote_token_program: Option<solana_address::Address>,
-    associated_token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    rent_program: Option<solana_address::Address>,
-    metadata_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -319,7 +310,6 @@ impl MigrateToCpswapBuilder {
             platform_config,
             cpswap_program: None,
             cpswap_pool,
-            cpswap_authority: None,
             cpswap_lp_mint: None,
             cpswap_base_vault: None,
             cpswap_quote_vault: None,
@@ -327,20 +317,12 @@ impl MigrateToCpswapBuilder {
             cpswap_create_pool_fee,
             cpswap_observation: None,
             lock_program: None,
-            lock_authority: None,
             lock_lp_vault,
-            authority: None,
             pool_state: None,
             global_config,
             base_vault,
             quote_vault,
             pool_lp_token,
-            base_token_program: None,
-            quote_token_program: None,
-            associated_token_program: None,
-            system_program: None,
-            rent_program: None,
-            metadata_program: None,
             __remaining_accounts: Vec::new(),
         }
     }
@@ -348,12 +330,6 @@ impl MigrateToCpswapBuilder {
     #[inline(always)]
     pub fn cpswap_program(&mut self, cpswap_program: solana_address::Address) -> &mut Self {
         self.cpswap_program = Some(cpswap_program);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'cpswapAuthority']`
-    #[inline(always)]
-    pub fn cpswap_authority(&mut self, cpswap_authority: solana_address::Address) -> &mut Self {
-        self.cpswap_authority = Some(cpswap_authority);
         self
     }
     /// `[optional account, default to PDA derived from 'cpswapLpMint']`
@@ -386,75 +362,12 @@ impl MigrateToCpswapBuilder {
         self.lock_program = Some(lock_program);
         self
     }
-    /// `[optional account, default to PDA derived from 'lockAuthority']`
-    #[inline(always)]
-    pub fn lock_authority(&mut self, lock_authority: solana_address::Address) -> &mut Self {
-        self.lock_authority = Some(lock_authority);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
     /// `[optional account, default to PDA derived from 'poolState']`
     /// Account that stores the pool's state and parameters
     /// PDA generated using POOL_SEED and both token mints
     #[inline(always)]
     pub fn pool_state(&mut self, pool_state: solana_address::Address) -> &mut Self {
         self.pool_state = Some(pool_state);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the base token
-    /// Must be the standard Token program
-    #[inline(always)]
-    pub fn base_token_program(&mut self, base_token_program: solana_address::Address) -> &mut Self {
-        self.base_token_program = Some(base_token_program);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the quote token
-    #[inline(always)]
-    pub fn quote_token_program(
-        &mut self,
-        quote_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.quote_token_program = Some(quote_token_program);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    /// Program to create an ATA for receiving fee NFT
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'SysvarRent111111111111111111111111111111111']`
-    /// Required for rent exempt calculations
-    #[inline(always)]
-    pub fn rent_program(&mut self, rent_program: solana_address::Address) -> &mut Self {
-        self.rent_program = Some(rent_program);
-        self
-    }
-    /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
-    /// Program to create NFT metadata accunt
-    #[inline(always)]
-    pub fn metadata_program(&mut self, metadata_program: solana_address::Address) -> &mut Self {
-        self.metadata_program = Some(metadata_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -482,9 +395,7 @@ impl MigrateToCpswapBuilder {
             "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
         ));
         let cpswap_pool = self.cpswap_pool;
-        let cpswap_authority = self
-            .cpswap_authority
-            .unwrap_or(crate::pdas::CPSWAP_AUTHORITY_ADDRESS);
+        let cpswap_authority = crate::pdas::CPSWAP_AUTHORITY_ADDRESS;
         let cpswap_lp_mint = self
             .cpswap_lp_mint
             .unwrap_or_else(|| crate::pdas::find_cpswap_lp_mint_pda(&self.cpswap_pool).0);
@@ -502,11 +413,9 @@ impl MigrateToCpswapBuilder {
         let lock_program = self.lock_program.unwrap_or(solana_address::address!(
             "LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE"
         ));
-        let lock_authority = self
-            .lock_authority
-            .unwrap_or(crate::pdas::LOCK_AUTHORITY_ADDRESS);
+        let lock_authority = crate::pdas::LOCK_AUTHORITY_ADDRESS;
         let lock_lp_vault = self.lock_lp_vault;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state.unwrap_or_else(|| {
             crate::pdas::find_pool_state_pda(&self.base_mint, &self.quote_mint).0
         });
@@ -514,26 +423,16 @@ impl MigrateToCpswapBuilder {
         let base_vault = self.base_vault;
         let quote_vault = self.quote_vault;
         let pool_lp_token = self.pool_lp_token;
-        let base_token_program = self.base_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let quote_token_program = self.quote_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
+        let base_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let quote_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
-        let rent_program = self.rent_program.unwrap_or(solana_address::address!(
-            "SysvarRent111111111111111111111111111111111"
-        ));
-        let metadata_program = self.metadata_program.unwrap_or(solana_address::address!(
-            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-        ));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
+        let rent_program = solana_address::address!("SysvarRent111111111111111111111111111111111");
+        let metadata_program =
+            solana_address::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
         let accounts = MigrateToCpswap {
             payer,
             base_mint,

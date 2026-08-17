@@ -8,22 +8,17 @@
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 
-pub const CREATE_NATIVE_TREASURY_DISCRIMINATOR: u8 = 25;
-
 /// Accounts.
 #[derive(Debug)]
-pub struct CreateNativeTreasury {
-    /// Governance account the treasury account is for
-    pub governance_account: solana_address::Address,
-    /// seeds=['native-treasury', governance]
-    pub native_treasury_account: solana_address::Address,
-
+pub struct Instruction13 {
     pub payer: solana_address::Address,
 
-    pub system_program: solana_address::Address,
+    pub optional_derived: Option<solana_address::Address>,
+
+    pub inline_derived: solana_address::Address,
 }
 
-impl CreateNativeTreasury {
+impl Instruction13 {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         self.instruction_with_remaining_accounts(&[])
     }
@@ -33,29 +28,28 @@ impl CreateNativeTreasury {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.governance_account,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
+        if let Some(optional_derived) = self.optional_derived {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                optional_derived,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::DUMMY_ID,
+                false,
+            ));
+        }
         accounts.push(solana_instruction::AccountMeta::new(
-            self.native_treasury_account,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.payer, true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.system_program,
+            self.inline_derived,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = CreateNativeTreasuryInstructionData::new()
-            .try_to_vec()
-            .unwrap();
+        let data = Instruction13InstructionData::new().try_to_vec().unwrap();
 
         solana_instruction::Instruction {
-            program_id: crate::SPL_GOVERNANCE_ID,
+            program_id: crate::DUMMY_ID,
             accounts,
             data,
         }
@@ -63,13 +57,11 @@ impl CreateNativeTreasury {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-pub struct CreateNativeTreasuryInstructionData {
-    discriminator: u8,
-}
+pub struct Instruction13InstructionData {}
 
-impl CreateNativeTreasuryInstructionData {
+impl Instruction13InstructionData {
     pub fn new() -> Self {
-        Self { discriminator: 25 }
+        Self {}
     }
 
     pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -77,40 +69,50 @@ impl CreateNativeTreasuryInstructionData {
     }
 }
 
-impl Default for CreateNativeTreasuryInstructionData {
+impl Default for Instruction13InstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Instruction builder for `CreateNativeTreasury`.
+/// Instruction builder for `Instruction13`.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` governance_account
-///   1. `[writable]` native_treasury_account
-///   2. `[signer]` payer
-///   3. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   0. `[writable, signer]` payer
+///   1. `[optional]` optional_derived
+///   2. `[writable, optional]` inline_derived (default to PDA derived from 'inlineDerived')
 #[derive(Clone, Debug)]
-pub struct CreateNativeTreasuryBuilder {
-    governance_account: solana_address::Address,
-    native_treasury_account: solana_address::Address,
+pub struct Instruction13Builder {
     payer: solana_address::Address,
+    optional_derived: Option<solana_address::Address>,
+    inline_derived: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl CreateNativeTreasuryBuilder {
-    pub fn new(
-        governance_account: solana_address::Address,
-        native_treasury_account: solana_address::Address,
-        payer: solana_address::Address,
-    ) -> Self {
+impl Instruction13Builder {
+    pub fn new(payer: solana_address::Address) -> Self {
         Self {
-            governance_account,
-            native_treasury_account,
             payer,
+            optional_derived: None,
+            inline_derived: None,
             __remaining_accounts: Vec::new(),
         }
+    }
+    /// `[optional account]`
+    #[inline(always)]
+    pub fn optional_derived(
+        &mut self,
+        optional_derived: Option<solana_address::Address>,
+    ) -> &mut Self {
+        self.optional_derived = optional_derived;
+        self
+    }
+    /// `[optional account, default to PDA derived from 'inlineDerived']`
+    #[inline(always)]
+    pub fn inline_derived(&mut self, inline_derived: solana_address::Address) -> &mut Self {
+        self.inline_derived = Some(inline_derived);
+        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -129,58 +131,61 @@ impl CreateNativeTreasuryBuilder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let governance_account = self.governance_account;
-        let native_treasury_account = self.native_treasury_account;
         let payer = self.payer;
-        let system_program = solana_address::address!("11111111111111111111111111111111");
-        let accounts = CreateNativeTreasury {
-            governance_account,
-            native_treasury_account,
+        let optional_derived = self.optional_derived;
+        let inline_derived = self.inline_derived.unwrap_or_else(|| {
+            solana_address::Address::find_program_address(
+                &[
+                    b"inline",
+                    self.optional_derived
+                        .expect("optional_derived is needed for inline_derived PDA")
+                        .as_ref(),
+                ],
+                &solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+            )
+            .0
+        });
+        let accounts = Instruction13 {
             payer,
-            system_program,
+            optional_derived,
+            inline_derived,
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
     }
 }
 
-/// `create_native_treasury` CPI accounts.
-pub struct CreateNativeTreasuryCpiAccounts<'a, 'b> {
-    /// Governance account the treasury account is for
-    pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-    /// seeds=['native-treasury', governance]
-    pub native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
-
+/// `instruction13` CPI accounts.
+pub struct Instruction13CpiAccounts<'a, 'b> {
     pub payer: &'b solana_account_info::AccountInfo<'a>,
 
-    pub system_program: &'b solana_account_info::AccountInfo<'a>,
+    pub optional_derived: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub inline_derived: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `create_native_treasury` CPI instruction.
-pub struct CreateNativeTreasuryCpi<'a, 'b> {
+/// `instruction13` CPI instruction.
+pub struct Instruction13Cpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-    /// Governance account the treasury account is for
-    pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-    /// seeds=['native-treasury', governance]
-    pub native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_account_info::AccountInfo<'a>,
 
-    pub system_program: &'b solana_account_info::AccountInfo<'a>,
+    pub optional_derived: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub inline_derived: &'b solana_account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> CreateNativeTreasuryCpi<'a, 'b> {
+impl<'a, 'b> Instruction13Cpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: CreateNativeTreasuryCpiAccounts<'a, 'b>,
+        accounts: Instruction13CpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
-            governance_account: accounts.governance_account,
-            native_treasury_account: accounts.native_treasury_account,
             payer: accounts.payer,
-            system_program: accounts.system_program,
+            optional_derived: accounts.optional_derived,
+            inline_derived: accounts.inline_derived,
         }
     }
     #[inline(always)]
@@ -206,21 +211,21 @@ impl<'a, 'b> CreateNativeTreasuryCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.governance_account.key,
-            false,
-        ));
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
+        if let Some(optional_derived) = self.optional_derived {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                *optional_derived.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::DUMMY_ID,
+                false,
+            ));
+        }
         accounts.push(solana_instruction::AccountMeta::new(
-            *self.native_treasury_account.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.payer.key,
-            true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
+            *self.inline_derived.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -230,21 +235,20 @@ impl<'a, 'b> CreateNativeTreasuryCpi<'a, 'b> {
                 is_signer: remaining_account.2,
             })
         });
-        let data = CreateNativeTreasuryInstructionData::new()
-            .try_to_vec()
-            .unwrap();
+        let data = Instruction13InstructionData::new().try_to_vec().unwrap();
 
         let instruction = solana_instruction::Instruction {
-            program_id: crate::SPL_GOVERNANCE_ID,
+            program_id: crate::DUMMY_ID,
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.governance_account.clone());
-        account_infos.push(self.native_treasury_account.clone());
         account_infos.push(self.payer.clone());
-        account_infos.push(self.system_program.clone());
+        if let Some(optional_derived) = self.optional_derived {
+            account_infos.push(optional_derived.clone());
+        }
+        account_infos.push(self.inline_derived.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -257,36 +261,41 @@ impl<'a, 'b> CreateNativeTreasuryCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `CreateNativeTreasury` via CPI.
+/// Instruction builder for `Instruction13` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[]` governance_account
-///   1. `[writable]` native_treasury_account
-///   2. `[signer]` payer
-///   3. `[]` system_program
+///   0. `[writable, signer]` payer
+///   1. `[optional]` optional_derived (default to PDA derived from 'optionalDerivedSeed')
+///   2. `[writable]` inline_derived
 #[derive(Clone, Debug)]
-pub struct CreateNativeTreasuryCpiBuilder<'a, 'b> {
-    instruction: Box<CreateNativeTreasuryCpiBuilderInstruction<'a, 'b>>,
+pub struct Instruction13CpiBuilder<'a, 'b> {
+    instruction: Box<Instruction13CpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> CreateNativeTreasuryCpiBuilder<'a, 'b> {
+impl<'a, 'b> Instruction13CpiBuilder<'a, 'b> {
     pub fn new(
         __program: &'b solana_account_info::AccountInfo<'a>,
-        governance_account: &'b solana_account_info::AccountInfo<'a>,
-        native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
         payer: &'b solana_account_info::AccountInfo<'a>,
-        system_program: &'b solana_account_info::AccountInfo<'a>,
+        inline_derived: &'b solana_account_info::AccountInfo<'a>,
     ) -> Self {
-        let instruction = Box::new(CreateNativeTreasuryCpiBuilderInstruction {
+        let instruction = Box::new(Instruction13CpiBuilderInstruction {
             __program,
-            governance_account,
-            native_treasury_account,
             payer,
-            system_program,
+            optional_derived: None,
+            inline_derived,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+    /// `[optional account]`
+    #[inline(always)]
+    pub fn optional_derived(
+        &mut self,
+        optional_derived: Option<&'b solana_account_info::AccountInfo<'a>>,
+    ) -> &mut Self {
+        self.instruction.optional_derived = optional_derived;
+        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -322,12 +331,11 @@ impl<'a, 'b> CreateNativeTreasuryCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let instruction = CreateNativeTreasuryCpi {
+        let instruction = Instruction13Cpi {
             __program: self.instruction.__program,
-            governance_account: self.instruction.governance_account,
-            native_treasury_account: self.instruction.native_treasury_account,
             payer: self.instruction.payer,
-            system_program: self.instruction.system_program,
+            optional_derived: self.instruction.optional_derived,
+            inline_derived: self.instruction.inline_derived,
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -337,12 +345,11 @@ impl<'a, 'b> CreateNativeTreasuryCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct CreateNativeTreasuryCpiBuilderInstruction<'a, 'b> {
+struct Instruction13CpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    governance_account: &'b solana_account_info::AccountInfo<'a>,
-    native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
     payer: &'b solana_account_info::AccountInfo<'a>,
-    system_program: &'b solana_account_info::AccountInfo<'a>,
+    optional_derived: Option<&'b solana_account_info::AccountInfo<'a>>,
+    inline_derived: &'b solana_account_info::AccountInfo<'a>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

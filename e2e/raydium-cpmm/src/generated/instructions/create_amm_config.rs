@@ -99,12 +99,11 @@ impl CreateAmmConfigInstructionArgs {
 ///
 ///   0. `[writable, signer, optional]` owner (default to `GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ`)
 ///   1. `[writable, optional]` amm_config (default to PDA derived from 'ammConfig')
-///   2. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreateAmmConfigBuilder {
     owner: Option<solana_address::Address>,
     amm_config: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     index: u16,
     trade_fee_rate: u64,
     protocol_fee_rate: u64,
@@ -124,7 +123,6 @@ impl CreateAmmConfigBuilder {
         Self {
             owner: None,
             amm_config: None,
-            system_program: None,
             index,
             trade_fee_rate,
             protocol_fee_rate,
@@ -145,12 +143,6 @@ impl CreateAmmConfigBuilder {
     #[inline(always)]
     pub fn amm_config(&mut self, amm_config: solana_address::Address) -> &mut Self {
         self.amm_config = Some(amm_config);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -176,9 +168,7 @@ impl CreateAmmConfigBuilder {
         let amm_config = self
             .amm_config
             .unwrap_or_else(|| crate::pdas::find_amm_config_pda(self.index.clone()).0);
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreateAmmConfig {
             owner,
             amm_config,

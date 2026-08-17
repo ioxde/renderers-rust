@@ -33,6 +33,7 @@ import {
     findProgramNodeFromPath,
     getResolvedInstructionInputsVisitor,
     LinkableDictionary,
+    type NodePath,
     NodeStack,
     pipe,
     recordLinkablesOnFirstVisitVisitor,
@@ -54,6 +55,7 @@ import {
     getConstantPdaSeedBytes,
     getDiscriminatorConditions,
     getDiscriminatorConstants,
+    getFixedInstructionAccountAddress,
     getImportFromFactory,
     type GetImportFromFunction,
     getTraitsFromNodeFactory,
@@ -452,6 +454,24 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             )
                             .map(a => a.name),
                     );
+                    // Accounts the program pins to one address, keyed to the Rust expression the
+                    // builder binds them to. Only the plain builder drops them; the accounts struct
+                    // and the CPI builder still take every account.
+                    const builderFixedAccounts: Record<string, string> = {};
+                    // The same accounts keyed to the bare base58 the doc list prints.
+                    const builderFixedAddresses: Record<string, string> = {};
+                    for (const account of nodeAccounts) {
+                        const address = getFixedInstructionAccountAddress(account, instructionPath, linkables);
+                        if (address === undefined) continue;
+                        builderFixedAddresses[account.name] = address;
+                        builderFixedAccounts[account.name] = renderFixedAddressExpr({
+                            account,
+                            address,
+                            instructionPath,
+                            linkables,
+                            program,
+                        });
+                    }
                     // CPI can't derive AccountInfo from PDA/publicKey defaults.
                     const cpiBuilderOptionalAccounts = new Set(
                         nodeAccounts
@@ -494,11 +514,15 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                         requiredArgNames,
                         stack,
                     });
-                    const hasRequiredAccounts = nodeAccounts.some(a => !builderOptionalAccounts.has(a.name));
+                    const hasRequiredAccounts = nodeAccounts.some(
+                        a => !builderOptionalAccounts.has(a.name) && !(a.name in builderFixedAccounts),
+                    );
 
                     return createRenderMap(`instructions/${snakeCase(node.name)}.rs`, {
                         content: render('instructionsPage.njk', {
                             accountsAndArgsConflicts,
+                            builderFixedAccounts,
+                            builderFixedAddresses,
                             builderOptionalAccounts: [...builderOptionalAccounts],
                             cpiBuilderOptionalAccounts: [...cpiBuilderOptionalAccounts],
                             dataTraits: dataTraits.render,
@@ -1108,6 +1132,42 @@ function getPdaDerivingProgram(pda: PdaNode, program: ProgramNode): PdaDerivingP
     };
 }
 
+/**
+ * The expression the builder binds a fixed account to. `crate::pdas::<PDA>_ADDRESS` is only usable
+ * where the `pdas` page folds to the very same address, since that page is what emits the constant.
+ * Always a bare `Address`: a fixed account is never IDL-optional, so no field here holds an `Option`.
+ */
+function renderFixedAddressExpr(ctx: {
+    account: InstructionAccountNode;
+    address: string;
+    instructionPath: NodePath<InstructionNode>;
+    linkables: LinkableDictionary;
+    program: ProgramNode;
+}): string {
+    const { account, address, instructionPath, linkables, program } = ctx;
+    const localProgramIdExpr = `crate::${snakeCase(program.name).toUpperCase()}_ID`;
+    const defaultValue = account.defaultValue;
+
+    if (defaultValue && isNode(defaultValue, ['programIdValueNode', 'programLinkNode'])) {
+        return address === program.publicKey ? localProgramIdExpr : `solana_address::address!("${address}")`;
+    }
+
+    if (defaultValue && isNode(defaultValue, 'pdaValueNode') && isNode(defaultValue.pda, 'pdaLinkNode')) {
+        const pda = linkables.get([...instructionPath, defaultValue.pda]);
+        if (pda) {
+            const { derivingProgramAddress } = getPdaDerivingProgram(pda, program);
+            const folded = derivingProgramAddress
+                ? computePdaDerivation(pda.seeds ?? [], derivingProgramAddress)
+                : null;
+            if (folded?.address === address) {
+                return `crate::pdas::${snakeCase(defaultValue.pda.name).toUpperCase()}_ADDRESS`;
+            }
+        }
+    }
+
+    return `solana_address::address!("${address}")`;
+}
+
 /** A Rust byte-string literal only accepts ASCII, so anything else has to render as a byte array. */
 function isPrintableAscii(text: string): boolean {
     return /^[\x20-\x7e]*$/.test(text);
@@ -1252,9 +1312,12 @@ function resolveInstructionPdaDefaults(ctx: {
     // PDAs whose helpers require the deriving program as a parameter.
     const dynamicOnlyPdas = getDynamicProgramOnlyPdas(program);
 
+    // Accounts whose `instruction()` local is a bare `Address` a later derivation may read instead of
+    // the field behind it. Excludes IDL-optional accounts: `instructionsPageBuilder.njk` passes their
+    // `Option` through untouched, and handing that to a seed or deriving program does not compile.
     // Cast to string to avoid branded CamelCaseString type.
     const pdaDefaultedNames = new Set<string>(
-        accounts.filter(a => a.defaultValue?.kind === 'pdaValueNode').map(a => a.name as string),
+        accounts.filter(a => a.defaultValue?.kind === 'pdaValueNode' && !a.isOptional).map(a => a.name as string),
     );
 
     // Nested argument paths (e.g. `guard.mint`) have no builder field to read from.
@@ -1273,7 +1336,7 @@ function resolveInstructionPdaDefaults(ctx: {
         if (isNode(ref, 'accountValueNode')) {
             const refName = snakeCase(ref.name);
             if (pdaDefaultedNames.has(ref.name)) {
-                // Previously derived in the builder; visitor ordering guarantees it.
+                // Bound earlier as a bare `Address`; visitor ordering guarantees it precedes this use.
                 return refName;
             }
             const refAccount = accounts.find(a => a.name === ref.name);

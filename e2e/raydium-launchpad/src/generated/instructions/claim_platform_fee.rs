@@ -124,27 +124,23 @@ impl Default for ClaimPlatformFeeInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` platform_fee_wallet
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   2. `[writable]` pool_state
 ///   3. `[]` platform_config
 ///   4. `[writable]` quote_vault
 ///   5. `[writable, optional]` recipient_token_account (default to PDA derived from 'recipientTokenAccount')
 ///   6. `[]` quote_mint
-///   7. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   9. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+///   7. `[]` token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   8. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   9. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
 #[derive(Clone, Debug)]
 pub struct ClaimPlatformFeeBuilder {
     platform_fee_wallet: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     platform_config: solana_address::Address,
     quote_vault: solana_address::Address,
     recipient_token_account: Option<solana_address::Address>,
     quote_mint: solana_address::Address,
-    token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    associated_token_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -158,25 +154,13 @@ impl ClaimPlatformFeeBuilder {
     ) -> Self {
         Self {
             platform_fee_wallet,
-            authority: None,
             pool_state,
             platform_config,
             quote_vault,
             recipient_token_account: None,
             quote_mint,
-            token_program: None,
-            system_program: None,
-            associated_token_program: None,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault and mint operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
     /// `[optional account, default to PDA derived from 'recipientTokenAccount']`
     /// The address that receives the collected quote token fees
@@ -186,30 +170,6 @@ impl ClaimPlatformFeeBuilder {
         recipient_token_account: solana_address::Address,
     ) -> &mut Self {
         self.recipient_token_account = Some(recipient_token_account);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL program for input token transfers
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    /// Required for associated token program
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -230,7 +190,7 @@ impl ClaimPlatformFeeBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let platform_fee_wallet = self.platform_fee_wallet;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let platform_config = self.platform_config;
         let quote_vault = self.quote_vault;
@@ -250,17 +210,10 @@ impl ClaimPlatformFeeBuilder {
             )
             .0
         });
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let token_program = solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
         let accounts = ClaimPlatformFee {
             platform_fee_wallet,
             authority,

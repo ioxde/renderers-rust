@@ -124,7 +124,7 @@ impl ExecuteInstructionArgs {
 ///   3. `[]` owner_delegate
 ///   4. `[optional]` extra_metas_account (default to PDA derived from 'extraMetasAccount')
 ///   5. `[optional]` guard (default to PDA derived from 'guard')
-///   6. `[optional]` instruction_sysvar_account (default to `Sysvar1nstructions1111111111111111111111111`)
+///   6. `[]` instruction_sysvar_account (fixed to 'Sysvar1nstructions1111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct ExecuteBuilder {
     source_account: solana_address::Address,
@@ -133,7 +133,6 @@ pub struct ExecuteBuilder {
     owner_delegate: solana_address::Address,
     extra_metas_account: Option<solana_address::Address>,
     guard: Option<solana_address::Address>,
-    instruction_sysvar_account: Option<solana_address::Address>,
     amount: u64,
     guard_mint: Address,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -155,7 +154,6 @@ impl ExecuteBuilder {
             owner_delegate,
             extra_metas_account: None,
             guard: None,
-            instruction_sysvar_account: None,
             amount,
             guard_mint,
             __remaining_accounts: Vec::new(),
@@ -174,15 +172,6 @@ impl ExecuteBuilder {
     #[inline(always)]
     pub fn guard(&mut self, guard: solana_address::Address) -> &mut Self {
         self.guard = Some(guard);
-        self
-    }
-    /// `[optional account, default to 'Sysvar1nstructions1111111111111111111111111']`
-    #[inline(always)]
-    pub fn instruction_sysvar_account(
-        &mut self,
-        instruction_sysvar_account: solana_address::Address,
-    ) -> &mut Self {
-        self.instruction_sysvar_account = Some(instruction_sysvar_account);
         self
     }
     /// Add an additional account to the instruction.
@@ -213,10 +202,7 @@ impl ExecuteBuilder {
             .guard
             .unwrap_or_else(|| crate::pdas::find_guard_pda(&self.guard_mint.clone()).0);
         let instruction_sysvar_account =
-            self.instruction_sysvar_account
-                .unwrap_or(solana_address::address!(
-                    "Sysvar1nstructions1111111111111111111111111"
-                ));
+            solana_address::address!("Sysvar1nstructions1111111111111111111111111");
         let accounts = Execute {
             source_account,
             mint,

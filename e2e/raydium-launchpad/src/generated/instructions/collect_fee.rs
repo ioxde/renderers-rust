@@ -109,23 +109,21 @@ impl Default for CollectFeeInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[signer]` owner
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   2. `[writable]` pool_state
 ///   3. `[]` global_config
 ///   4. `[writable]` quote_vault
 ///   5. `[]` quote_mint
 ///   6. `[writable]` recipient_token_account
-///   7. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   7. `[]` token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
 #[derive(Clone, Debug)]
 pub struct CollectFeeBuilder {
     owner: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     global_config: solana_address::Address,
     quote_vault: solana_address::Address,
     quote_mint: solana_address::Address,
     recipient_token_account: solana_address::Address,
-    token_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -140,28 +138,13 @@ impl CollectFeeBuilder {
     ) -> Self {
         Self {
             owner,
-            authority: None,
             pool_state,
             global_config,
             quote_vault,
             quote_mint,
             recipient_token_account,
-            token_program: None,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL program for input token transfers
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -181,15 +164,13 @@ impl CollectFeeBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let owner = self.owner;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let global_config = self.global_config;
         let quote_vault = self.quote_vault;
         let quote_mint = self.quote_mint;
         let recipient_token_account = self.recipient_token_account;
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
+        let token_program = solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         let accounts = CollectFee {
             owner,
             authority,

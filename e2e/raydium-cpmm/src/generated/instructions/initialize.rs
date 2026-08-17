@@ -200,7 +200,7 @@ impl InitializeInstructionArgs {
 ///
 ///   0. `[writable, signer]` creator
 ///   1. `[]` amm_config
-///   2. `[optional]` authority (default to PDA derived from 'authority')
+///   2. `[]` authority (fixed to 'GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL')
 ///   3. `[writable]` pool_state
 ///   4. `[]` token0_mint
 ///   5. `[]` token1_mint
@@ -210,19 +210,18 @@ impl InitializeInstructionArgs {
 ///   9. `[writable, optional]` creator_lp_token (default to PDA derived from 'creatorLpToken')
 ///   10. `[writable, optional]` token0_vault (default to PDA derived from 'token0Vault')
 ///   11. `[writable, optional]` token1_vault (default to PDA derived from 'token1Vault')
-///   12. `[writable, optional]` create_pool_fee (default to `DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8`)
+///   12. `[writable]` create_pool_fee (fixed to 'DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8')
 ///   13. `[writable, optional]` observation_state (default to PDA derived from 'observationState')
-///   14. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   14. `[]` token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
 ///   15. `[]` token0_program
 ///   16. `[]` token1_program
-///   17. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-///   18. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   19. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
+///   17. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+///   18. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   19. `[]` rent (fixed to 'SysvarRent111111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct InitializeBuilder {
     creator: solana_address::Address,
     amm_config: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     token0_mint: solana_address::Address,
     token1_mint: solana_address::Address,
@@ -232,14 +231,9 @@ pub struct InitializeBuilder {
     creator_lp_token: Option<solana_address::Address>,
     token0_vault: Option<solana_address::Address>,
     token1_vault: Option<solana_address::Address>,
-    create_pool_fee: Option<solana_address::Address>,
     observation_state: Option<solana_address::Address>,
-    token_program: Option<solana_address::Address>,
     token0_program: solana_address::Address,
     token1_program: solana_address::Address,
-    associated_token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    rent: Option<solana_address::Address>,
     init_amount0: u64,
     init_amount1: u64,
     open_time: u64,
@@ -264,7 +258,6 @@ impl InitializeBuilder {
         Self {
             creator,
             amm_config,
-            authority: None,
             pool_state,
             token0_mint,
             token1_mint,
@@ -274,26 +267,14 @@ impl InitializeBuilder {
             creator_lp_token: None,
             token0_vault: None,
             token1_vault: None,
-            create_pool_fee: None,
             observation_state: None,
-            token_program: None,
             token0_program,
             token1_program,
-            associated_token_program: None,
-            system_program: None,
-            rent: None,
             init_amount0,
             init_amount1,
             open_time,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// pool vault and lp mint authority
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
     /// `[optional account, default to PDA derived from 'lpMint']`
     /// pool lp mint
@@ -321,49 +302,11 @@ impl InitializeBuilder {
         self.token1_vault = Some(token1_vault);
         self
     }
-    /// `[optional account, default to 'DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8']`
-    /// create pool fee account
-    #[inline(always)]
-    pub fn create_pool_fee(&mut self, create_pool_fee: solana_address::Address) -> &mut Self {
-        self.create_pool_fee = Some(create_pool_fee);
-        self
-    }
     /// `[optional account, default to PDA derived from 'observationState']`
     /// an account to store oracle observations
     #[inline(always)]
     pub fn observation_state(&mut self, observation_state: solana_address::Address) -> &mut Self {
         self.observation_state = Some(observation_state);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// Program to create mint account and mint tokens
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    /// Program to create an ATA for receiving position NFT
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// To create a new program account
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'SysvarRent111111111111111111111111111111111']`
-    /// Sysvar for program account
-    #[inline(always)]
-    pub fn rent(&mut self, rent: solana_address::Address) -> &mut Self {
-        self.rent = Some(rent);
         self
     }
     /// Add an additional account to the instruction.
@@ -385,7 +328,7 @@ impl InitializeBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let creator = self.creator;
         let amm_config = self.amm_config;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let token0_mint = self.token0_mint;
         let token1_mint = self.token1_mint;
@@ -415,28 +358,18 @@ impl InitializeBuilder {
         let token1_vault = self.token1_vault.unwrap_or_else(|| {
             crate::pdas::find_token1_vault_pda(&self.pool_state, &self.token1_mint).0
         });
-        let create_pool_fee = self.create_pool_fee.unwrap_or(solana_address::address!(
-            "DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8"
-        ));
+        let create_pool_fee =
+            solana_address::address!("DNXgeM9EiiaAbaWvwjHj9fQQLAX5ZsfHyvmYUNRAdNC8");
         let observation_state = self
             .observation_state
             .unwrap_or_else(|| crate::pdas::find_observation_state_pda(&self.pool_state).0);
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
+        let token_program = solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         let token0_program = self.token0_program;
         let token1_program = self.token1_program;
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
-        let rent = self.rent.unwrap_or(solana_address::address!(
-            "SysvarRent111111111111111111111111111111111"
-        ));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
+        let rent = solana_address::address!("SysvarRent111111111111111111111111111111111");
         let accounts = Initialize {
             creator,
             amm_config,

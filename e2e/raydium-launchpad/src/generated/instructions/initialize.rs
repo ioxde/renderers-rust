@@ -195,19 +195,19 @@ impl InitializeInstructionArgs {
 ///   1. `[]` creator
 ///   2. `[]` global_config
 ///   3. `[]` platform_config
-///   4. `[optional]` authority (default to PDA derived from 'authority')
+///   4. `[]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   5. `[writable, optional]` pool_state (default to PDA derived from 'poolState')
 ///   6. `[writable, signer]` base_mint
 ///   7. `[]` quote_mint
 ///   8. `[writable, optional]` base_vault (default to PDA derived from 'baseVault')
 ///   9. `[writable, optional]` quote_vault (default to PDA derived from 'quoteVault')
 ///   10. `[writable]` metadata_account
-///   11. `[optional]` base_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   12. `[optional]` quote_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   13. `[optional]` metadata_program (default to `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`)
-///   14. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   15. `[optional]` rent_program (default to `SysvarRent111111111111111111111111111111111`)
-///   16. `[optional]` event_authority (default to PDA derived from 'eventAuthority')
+///   11. `[]` base_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   12. `[]` quote_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   13. `[]` metadata_program (fixed to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
+///   14. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   15. `[]` rent_program (fixed to 'SysvarRent111111111111111111111111111111111')
+///   16. `[]` event_authority (fixed to '2DPAtwB8L12vrMRExbLuyGnC7n2J5LNoZQSejeQGpwkr')
 ///   17. `[]` program
 #[derive(Clone, Debug)]
 pub struct InitializeBuilder {
@@ -215,19 +215,12 @@ pub struct InitializeBuilder {
     creator: solana_address::Address,
     global_config: solana_address::Address,
     platform_config: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: Option<solana_address::Address>,
     base_mint: solana_address::Address,
     quote_mint: solana_address::Address,
     base_vault: Option<solana_address::Address>,
     quote_vault: Option<solana_address::Address>,
     metadata_account: solana_address::Address,
-    base_token_program: Option<solana_address::Address>,
-    quote_token_program: Option<solana_address::Address>,
-    metadata_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    rent_program: Option<solana_address::Address>,
-    event_authority: Option<solana_address::Address>,
     program: solana_address::Address,
     base_mint_param: MintParams,
     curve_param: CurveParams,
@@ -254,33 +247,18 @@ impl InitializeBuilder {
             creator,
             global_config,
             platform_config,
-            authority: None,
             pool_state: None,
             base_mint,
             quote_mint,
             base_vault: None,
             quote_vault: None,
             metadata_account,
-            base_token_program: None,
-            quote_token_program: None,
-            metadata_program: None,
-            system_program: None,
-            rent_program: None,
-            event_authority: None,
             program,
             base_mint_param,
             curve_param,
             vesting_param,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault and mint operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
     /// `[optional account, default to PDA derived from 'poolState']`
     /// Account that stores the pool's state and parameters
@@ -306,52 +284,6 @@ impl InitializeBuilder {
         self.quote_vault = Some(quote_vault);
         self
     }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the base token
-    /// Must be the standard Token program
-    #[inline(always)]
-    pub fn base_token_program(&mut self, base_token_program: solana_address::Address) -> &mut Self {
-        self.base_token_program = Some(base_token_program);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the quote token
-    #[inline(always)]
-    pub fn quote_token_program(
-        &mut self,
-        quote_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.quote_token_program = Some(quote_token_program);
-        self
-    }
-    /// `[optional account, default to 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s']`
-    /// Metaplex Token Metadata program
-    /// Used to create metadata for the base token
-    #[inline(always)]
-    pub fn metadata_program(&mut self, metadata_program: solana_address::Address) -> &mut Self {
-        self.metadata_program = Some(metadata_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'SysvarRent111111111111111111111111111111111']`
-    /// Required for rent exempt calculations
-    #[inline(always)]
-    pub fn rent_program(&mut self, rent_program: solana_address::Address) -> &mut Self {
-        self.rent_program = Some(rent_program);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'eventAuthority']`
-    #[inline(always)]
-    pub fn event_authority(&mut self, event_authority: solana_address::Address) -> &mut Self {
-        self.event_authority = Some(event_authority);
-        self
-    }
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -373,7 +305,7 @@ impl InitializeBuilder {
         let creator = self.creator;
         let global_config = self.global_config;
         let platform_config = self.platform_config;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let base_mint = self.base_mint;
         let quote_mint = self.quote_mint;
         let pool_state = self.pool_state.unwrap_or_else(|| {
@@ -386,24 +318,15 @@ impl InitializeBuilder {
             .quote_vault
             .unwrap_or_else(|| crate::pdas::find_quote_vault_pda(&pool_state, &self.quote_mint).0);
         let metadata_account = self.metadata_account;
-        let base_token_program = self.base_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let quote_token_program = self.quote_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let metadata_program = self.metadata_program.unwrap_or(solana_address::address!(
-            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-        ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
-        let rent_program = self.rent_program.unwrap_or(solana_address::address!(
-            "SysvarRent111111111111111111111111111111111"
-        ));
-        let event_authority = self
-            .event_authority
-            .unwrap_or(crate::pdas::EVENT_AUTHORITY_ADDRESS);
+        let base_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let quote_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let metadata_program =
+            solana_address::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
+        let rent_program = solana_address::address!("SysvarRent111111111111111111111111111111111");
+        let event_authority = crate::pdas::EVENT_AUTHORITY_ADDRESS;
         let program = self.program;
         let accounts = Initialize {
             payer,

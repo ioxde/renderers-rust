@@ -99,7 +99,7 @@ impl Default for InitializeInstructionData {
 ///   1. `[optional]` guard (default to PDA derived from 'guard')
 ///   2. `[]` mint
 ///   3. `[writable, signer]` transfer_hook_authority
-///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   5. `[writable, signer]` payer
 #[derive(Clone, Debug)]
 pub struct InitializeBuilder {
@@ -107,7 +107,6 @@ pub struct InitializeBuilder {
     guard: Option<solana_address::Address>,
     mint: solana_address::Address,
     transfer_hook_authority: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     payer: solana_address::Address,
     guard_mint: Address,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -125,7 +124,6 @@ impl InitializeBuilder {
             guard: None,
             mint,
             transfer_hook_authority,
-            system_program: None,
             payer,
             guard_mint,
             __remaining_accounts: Vec::new(),
@@ -144,12 +142,6 @@ impl InitializeBuilder {
     #[inline(always)]
     pub fn guard(&mut self, guard: solana_address::Address) -> &mut Self {
         self.guard = Some(guard);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -177,9 +169,7 @@ impl InitializeBuilder {
             .guard
             .unwrap_or_else(|| crate::pdas::find_guard_pda(&self.guard_mint.clone()).0);
         let transfer_hook_authority = self.transfer_hook_authority;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let payer = self.payer;
         let accounts = Initialize {
             extra_metas_account,

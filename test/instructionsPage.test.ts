@@ -3,25 +3,35 @@ import {
     argumentValueNode,
     bytesTypeNode,
     bytesValueNode,
+    conditionalValueNode,
     constantPdaSeedNode,
     constantPdaSeedNodeFromString,
     instructionAccountNode,
     instructionArgumentNode,
+    instructionByteDeltaNode,
+    type InstructionNode,
     instructionNode,
+    instructionRemainingAccountsNode,
     numberTypeNode,
     numberValueNode,
     pdaLinkNode,
+    type PdaNode,
     pdaNode,
     pdaSeedValueNode,
     pdaValueNode,
     programIdValueNode,
+    programLinkNode,
     programNode,
     publicKeyTypeNode,
     publicKeyValueNode,
+    resolverValueNode,
+    rootNode,
+    snakeCase,
     stringTypeNode,
     variablePdaSeedNode,
 } from '@codama/nodes';
 import { getFromRenderMap } from '@codama/renderers-core';
+import { getCommonInstructionAccountDefaultRules } from '@codama/visitors';
 import { visit } from '@codama/visitors-core';
 import { expect, test } from 'vitest';
 
@@ -1640,7 +1650,7 @@ test('it renders mixed required accounts, PDA defaults, and publicKey defaults',
     codeContains(content, [`&self.mint,`]);
 });
 
-test('it renders programIdValueNode default account with unwrap_or program ID', () => {
+test('it binds a programIdValueNode default account to the program ID instead of asking the caller', () => {
     const node = programNode({
         instructions: [
             instructionNode({
@@ -1664,14 +1674,25 @@ test('it renders programIdValueNode default account with unwrap_or program ID', 
     const renderMap = visit(node, getRenderMapVisitor());
     const content = getFromRenderMap(renderMap, 'instructions/my_instruction.rs').content;
 
-    // programIdValueNode account is builder-optional (Option in struct).
-    codeContains(content, [`self_program: Option<solana_address::Address>`, `pub fn self_program(&mut self`]);
-    // In struct literal, unwraps with program ID default.
-    codeContains(content, [`self.self_program.unwrap_or(crate::TEST_PROGRAM_ID)`]);
-    // Required account 'owner' is in new().
-    codeContains(content, [/pub fn new\([^)]*owner: solana_address::Address/]);
-    // programIdValueNode account is NOT in new().
-    codeDoesNotContains(content, [/pub fn new\([^)]*self_program/]);
+    const builderSection = content.substring(
+        content.indexOf('Instruction builder for `MyInstruction`.'),
+        content.indexOf('`my_instruction` CPI accounts.'),
+    );
+
+    // The program dispatches to itself, so the builder holds nothing for the account.
+    codeDoesNotContains(builderSection, [
+        `self_program: Option<solana_address::Address>`,
+        `pub fn self_program(&mut self`,
+        `self.self_program`,
+        /pub fn new\([^)]*self_program/,
+    ]);
+    codeContains(builderSection, [`let self_program = crate::TEST_PROGRAM_ID;`]);
+    codeContains(builderSection, [/pub fn new\([^)]*owner: solana_address::Address/]);
+    // The escape hatches still take every account.
+    codeContains(content, [/pub struct MyInstruction \{[^}]*pub self_program: solana_address::Address/]);
+    codeContains(content.substring(content.indexOf('Instruction builder for `MyInstruction` via CPI')), [
+        `pub fn self_program(`,
+    ]);
 });
 
 test('it renders CPI builder with required accounts, args, and defaults', () => {
@@ -1803,7 +1824,7 @@ test('it avoids CPI builder param name collision when instruction has an account
     codeContains(cpiSection, [/program: &'b solana_account_info::AccountInfo<'a>,/]);
 });
 
-test('it uses unwrap_or with precomputed address for zero-variable-seed linked PDA', () => {
+test('it binds a zero-variable-seed linked PDA account to the folded address constant', () => {
     const node = programNode({
         instructions: [
             instructionNode({
@@ -1832,8 +1853,9 @@ test('it uses unwrap_or with precomputed address for zero-variable-seed linked P
     const renderMap = visit(node, getRenderMapVisitor());
     const content = getFromRenderMap(renderMap, 'instructions/do_something.rs').content;
 
-    codeContains(content, ['unwrap_or(', 'crate::pdas::CONFIG_ADDRESS']);
-    codeDoesNotContains(content, ['unwrap_or_else', 'find_config_pda']);
+    // Every seed is constant, so the address is settled here and the builder just binds it.
+    codeContains(content, ['let config = crate::pdas::CONFIG_ADDRESS;']);
+    codeDoesNotContains(content, ['unwrap_or', 'find_config_pda', 'pub fn config(&mut self']);
 });
 
 test('it calls the runtime finder for a constant-only PDA the generator could not fold', () => {
@@ -2326,4 +2348,844 @@ test('it hashes a programIdValueNode seed as the pinned deriving program', () =>
         '&solana_address::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"),',
     ]);
     codeDoesNotContains(content, ['crate::MY_PROGRAM_ID.as_ref(),']);
+});
+
+const TOKEN_PROGRAM_ADDRESS = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const RENT_SYSVAR_ADDRESS = 'SysvarRent111111111111111111111111111111111';
+
+function renderMyInstruction(instruction: InstructionNode, pdas: PdaNode[] = []): string {
+    const node = programNode({
+        instructions: [instruction],
+        name: 'testProgram',
+        pdas,
+        publicKey: '11111111111111111111111111111111',
+    });
+    return getFromRenderMap(visit(node, getRenderMapVisitor()), 'instructions/my_instruction.rs').content;
+}
+
+/** The plain builder alone; the accounts struct above it and the CPI page below it keep every account. */
+function builderSectionOf(content: string): string {
+    return content.substring(
+        content.indexOf('Instruction builder for `MyInstruction`.'),
+        content.indexOf('`my_instruction` CPI accounts.'),
+    );
+}
+
+test('it drops an account pinned by an address constraint from the builder', () => {
+    // Given `#[account(address = …)]`, which lowers to a publicKeyValueNode identified by the
+    // account's own name.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'payer' }),
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const builder = builderSectionOf(content);
+
+    // Then the builder neither holds nor exposes it, and binds the pinned address directly.
+    codeDoesNotContains(builder, [
+        'token_program: Option<solana_address::Address>',
+        'pub fn token_program(&mut self',
+        'self.token_program',
+        /pub fn new\([^)]*token_program/,
+    ]);
+    codeContains(builder, [`let token_program = solana_address::address!("${TOKEN_PROGRAM_ADDRESS}");`]);
+
+    // And the escape hatches still take every account.
+    codeContains(content, [/pub struct MyInstruction \{[^}]*pub token_program: solana_address::Address/]);
+    codeContains(content.substring(content.indexOf('`my_instruction` CPI accounts.')), [
+        /pub token_program: &'b solana_account_info::AccountInfo<'a>,/,
+    ]);
+    codeContains(content.substring(content.indexOf('Instruction builder for `MyInstruction` via CPI')), [
+        /pub fn new\(\s*__program: &'b solana_account_info::AccountInfo<'a>,\s*payer: &'b solana_account_info::AccountInfo<'a>,\s*token_program: &'b solana_account_info::AccountInfo<'a>,/,
+    ]);
+});
+
+test('it documents a fixed account in place rather than leaving a gap in the account list', () => {
+    // Given a pinned account sitting between two the caller still supplies. Dropping its doc line
+    // would skip an index, reading as an account the transaction omits.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'payer' }),
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: true, name: 'target' }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // Each assertion carries its `\n`: an annotation that swallowed the line break would weld the
+    // doc list into one line.
+    codeContains(builderSectionOf(content), [
+        '///   0. `[signer]` payer\n',
+        `///   1. \`[]\` token_program (fixed to '${TOKEN_PROGRAM_ADDRESS}')\n`,
+        '///   2. `[writable]` target\n',
+    ]);
+});
+
+test('it keeps an account whose publicKey default was synthesised from its name', () => {
+    // Given the default `getCommonInstructionAccountDefaultRules` invents for an unconstrained
+    // `token_program`: a heuristic identifier rather than the account name.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'splToken'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // Then the account stays parametric — it may well need to accept Token-2022.
+    codeContains(builderSectionOf(content), [
+        'token_program: Option<solana_address::Address>',
+        'pub fn token_program(&mut self',
+        `self.token_program.unwrap_or(solana_address::address!("${TOKEN_PROGRAM_ADDRESS}"))`,
+    ]);
+});
+
+test('it keeps an account whose program ID default was synthesised from its name', () => {
+    // Given the `program_id` heuristic: the one rule yielding a bare `programIdValueNode`, with no
+    // identifier to tell it apart by. Nothing pinned the account, so the caller may point it elsewhere.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: programIdValueNode(),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'programId',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    codeContains(builderSectionOf(content), [
+        'program_id: Option<solana_address::Address>',
+        'pub fn program_id(&mut self',
+        'self.program_id.unwrap_or(crate::TEST_PROGRAM_ID)',
+    ]);
+});
+
+test('it keeps an account whose publicKey default carries no identifier', () => {
+    // Given a hand-authored `publicKeyValueNode(addr)` — the shape every sysvar rule produces.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(RENT_SYSVAR_ADDRESS),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'rent',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // Then nothing proves the address is program-enforced, so the input stays.
+    codeContains(builderSectionOf(content), [
+        'rent: Option<solana_address::Address>',
+        'pub fn rent(&mut self',
+        `self.rent.unwrap_or(solana_address::address!("${RENT_SYSVAR_ADDRESS}"))`,
+    ]);
+});
+
+test('it keeps a signer account even when its address is pinned', () => {
+    // Given `#[account(address = ADMIN)] pub admin: Signer<'info>`: pinned, yet still a signature the
+    // caller must supply.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'admin'),
+                    isOptional: false,
+                    isSigner: true,
+                    isWritable: false,
+                    name: 'admin',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // Then dropping the input would make the instruction unbuildable, so it stays.
+    codeContains(builderSectionOf(content), ['admin: Option<solana_address::Address>', 'pub fn admin(&mut self']);
+});
+
+test('it keeps an optional account whose pinned publicKey default the builder never applies', () => {
+    // Given an IDL-optional account with a pinned address: `None` reaches the accounts struct, which
+    // emits the program id or omits the account per `optionalAccountStrategy`.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // Then dropping the input would change the meta, so it stays — along with the pass-through.
+    codeContains(builderSectionOf(content), [
+        'token_program: Option<solana_address::Address>',
+        'pub fn token_program(&mut self',
+        'let token_program = self.token_program;',
+    ]);
+});
+
+test('it passes an IDL-optional account through instead of applying its PDA default', () => {
+    // Given an IDL-optional account whose PDA default takes a variable seed, so it cannot fold.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('quoteAta'), [
+                        pdaSeedValueNode('owner', accountValueNode('owner')),
+                    ]),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'userQuoteAta',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [pdaNode({ name: 'quoteAta', seeds: [variablePdaSeedNode('owner', publicKeyTypeNode())] })],
+    );
+    const builder = builderSectionOf(content);
+
+    // Then the `Option` passes through: substituting the PDA would both fail to compile against the
+    // struct's `Option<Address>` field and make the account impossible to omit.
+    codeContains(builder, ['let user_quote_ata = self.user_quote_ata;']);
+    codeDoesNotContains(builder, ['self.user_quote_ata.unwrap_or_else', 'find_quote_ata_pda']);
+});
+
+test('it does not promise a default it never applies to an IDL-optional account', () => {
+    // The account list must not advertise a default the builder never applies.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('quoteAta'), [
+                        pdaSeedValueNode('owner', accountValueNode('owner')),
+                    ]),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'userQuoteAta',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [pdaNode({ name: 'quoteAta', seeds: [variablePdaSeedNode('owner', publicKeyTypeNode())] })],
+    );
+    const builder = builderSectionOf(content);
+
+    codeContains(builder, ['///   1. `[writable, optional]` user_quote_ata']);
+    codeDoesNotContains(builder, ['default to']);
+});
+
+test('it reads the field, not the binding, when a later PDA seeds off a pass-through account', () => {
+    // Given a second account seeding its PDA off the IDL-optional one. A derivation may name the
+    // earlier `let` binding only where it is a bare `Address`; here it is the untouched `Option`.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('vault'), [
+                        pdaSeedValueNode('owner', accountValueNode('owner')),
+                    ]),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'vault',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('receipt'), [
+                        pdaSeedValueNode('vault', accountValueNode('vault')),
+                    ]),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'receipt',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [
+            pdaNode({ name: 'vault', seeds: [variablePdaSeedNode('owner', publicKeyTypeNode())] }),
+            pdaNode({ name: 'receipt', seeds: [variablePdaSeedNode('vault', publicKeyTypeNode())] }),
+        ],
+    );
+    const builder = builderSectionOf(content);
+
+    // Then the seed unwraps the field: `find_receipt_pda` takes `&Address`, so `&vault` would not
+    // compile. Omitting the account panics, since `None` is not an address any PDA can derive from.
+    codeContains(builder, ['let vault = self.vault;', '&self.vault.expect("vault is needed for receipt PDA")']);
+    codeDoesNotContains(builder, [/find_receipt_pda\(\s*&vault,/]);
+});
+
+test('it reads the field when a pass-through account is a PDA deriving program', () => {
+    // Given the same account named as a PDA's deriving program rather than as a seed: that reference
+    // resolves down a separate path, with its own copy of the binding shortcut.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('vault'), [
+                        pdaSeedValueNode('owner', accountValueNode('owner')),
+                    ]),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'vault',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({ name: 'registry', seeds: [constantPdaSeedNodeFromString('utf8', 'registry')] }),
+                        [],
+                        accountValueNode('vault'),
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'registry',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [pdaNode({ name: 'vault', seeds: [variablePdaSeedNode('owner', publicKeyTypeNode())] })],
+    );
+    const builder = builderSectionOf(content);
+
+    // `find_program_address` wants `&Address` for its program just as the finder did for its seed.
+    codeContains(builder, ['&self.vault.expect("vault is needed for registry PDA")']);
+    codeDoesNotContains(builder, [/find_program_address\([\s\S]*?&vault,/]);
+});
+
+test('it extracts the address half when a pass-through either-signer account seeds a PDA', () => {
+    // Given a pass-through either-signer account, whose field is `Option<(Address, bool)>`. The seed
+    // wants the address alone, so the flag has to go before the unwrap.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('vault'), [
+                        pdaSeedValueNode('owner', accountValueNode('owner')),
+                    ]),
+                    isOptional: true,
+                    isSigner: 'either',
+                    isWritable: true,
+                    name: 'vault',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('receipt'), [
+                        pdaSeedValueNode('vault', accountValueNode('vault')),
+                    ]),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'receipt',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [
+            pdaNode({ name: 'vault', seeds: [variablePdaSeedNode('owner', publicKeyTypeNode())] }),
+            pdaNode({ name: 'receipt', seeds: [variablePdaSeedNode('vault', publicKeyTypeNode())] }),
+        ],
+    );
+    const builder = builderSectionOf(content);
+
+    codeContains(builder, ['&self.vault.map(|(k, _)| k).expect("vault is needed for receipt PDA")']);
+});
+
+test('it keeps an optional account whose PDA default folds to a constant', () => {
+    // Given an IDL-optional account defaulting to a PDA that folds here. No default is applied to an
+    // IDL-optional account, so dropping the input would strip the only way to omit it.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(pdaLinkNode('config'), []),
+                    isOptional: true,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'config',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+        [pdaNode({ name: 'config', seeds: [constantPdaSeedNodeFromString('utf8', 'config')] })],
+    );
+    const builder = builderSectionOf(content);
+
+    codeContains(builder, [
+        'config: Option<solana_address::Address>',
+        'pub fn config(&mut self',
+        'let config = self.config;',
+    ]);
+    codeDoesNotContains(builder, ['crate::pdas::CONFIG_ADDRESS']);
+    codeContains(content, [/pub struct MyInstruction \{[^}]*pub config: Option<solana_address::Address>/]);
+});
+
+// The two addresses `registry` derives to, computed outside this package: under the pinned program,
+// and under the local program the fold falls back on without a pin. They must stay distinct, or
+// neither test below can tell which program derived the address.
+const REGISTRY_UNDER_PINNED_PROGRAM = 'FjbnipWQFdoFm2h7PRhbHa5JU9tRKGpvYR94eMc9px4s';
+const REGISTRY_UNDER_LOCAL_PROGRAM = '7E6A6LLjsXVugHBtQMLvbVigu7N5i9P4i6U8XLZkvKu5';
+const CPMM_PROGRAM_ADDRESS = 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C';
+
+test('it keeps an account whose PDA names a deriving program the caller chooses', () => {
+    // Given a use-site handing the derivation a runtime account as its program, over an unpinned
+    // `pdaNode`: the caller picks the program, so no address is settled here.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'ammProgram' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({ name: 'registry', seeds: [constantPdaSeedNodeFromString('utf8', 'registry')] }),
+                        [],
+                        accountValueNode('ammProgram'),
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'registry',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const builder = builderSectionOf(content);
+
+    // Welding the local program's derivation here would put a wrong address on the wire.
+    codeContains(builder, ['pub fn registry(&mut self', 'find_program_address', '&self.amm_program,']);
+    codeDoesNotContains(builder, [REGISTRY_UNDER_LOCAL_PROGRAM, REGISTRY_UNDER_PINNED_PROGRAM]);
+});
+
+test('it folds a PDA under the program pinned on its pdaNode, not the local one', () => {
+    // Given the same use-site over a pinned `pdaNode`: the pin leaves the reference one legal value.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(CPMM_PROGRAM_ADDRESS, 'ammProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'ammProgram',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({
+                            name: 'registry',
+                            programId: CPMM_PROGRAM_ADDRESS,
+                            seeds: [constantPdaSeedNodeFromString('utf8', 'registry')],
+                        }),
+                        [],
+                        accountValueNode('ammProgram'),
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'registry',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const builder = builderSectionOf(content);
+
+    codeContains(builder, [`let registry = solana_address::address!("${REGISTRY_UNDER_PINNED_PROGRAM}");`]);
+    codeDoesNotContains(builder, ['pub fn registry(&mut self', REGISTRY_UNDER_LOCAL_PROGRAM]);
+});
+
+test('it keeps a pinned account that another account derives its PDA from', () => {
+    // Given the associated-token shape: `tokenProgram` seeds the ATA, so Token-2022 yields a
+    // different and correct address.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'mint' }),
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({
+                            name: 'associatedToken',
+                            programId: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+                            seeds: [
+                                variablePdaSeedNode('owner', publicKeyTypeNode()),
+                                variablePdaSeedNode('tokenProgram', publicKeyTypeNode()),
+                                variablePdaSeedNode('mint', publicKeyTypeNode()),
+                            ],
+                        }),
+                        [
+                            pdaSeedValueNode('owner', accountValueNode('owner')),
+                            pdaSeedValueNode('tokenProgram', accountValueNode('tokenProgram')),
+                            pdaSeedValueNode('mint', accountValueNode('mint')),
+                        ],
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'ata',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    codeContains(builderSectionOf(content), [
+        'pub fn token_program(&mut self',
+        `self.token_program.unwrap_or(solana_address::address!("${TOKEN_PROGRAM_ADDRESS}"))`,
+    ]);
+});
+
+test('it drops a pinned account once its address is baked into the PDA seeds', () => {
+    // Given the same shape where `stampPinnedAddresses` has inlined the pinned address as a constant
+    // seed and dropped the seed binding, so nothing derives from the account.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'mint' }),
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({
+                            name: 'associatedToken',
+                            programId: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+                            seeds: [
+                                variablePdaSeedNode('owner', publicKeyTypeNode()),
+                                constantPdaSeedNode(publicKeyTypeNode(), publicKeyValueNode(TOKEN_PROGRAM_ADDRESS)),
+                                variablePdaSeedNode('mint', publicKeyTypeNode()),
+                            ],
+                        }),
+                        [
+                            pdaSeedValueNode('owner', accountValueNode('owner')),
+                            pdaSeedValueNode('mint', accountValueNode('mint')),
+                        ],
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'ata',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const builder = builderSectionOf(content);
+
+    codeDoesNotContains(builder, ['pub fn token_program(&mut self', 'self.token_program']);
+    codeContains(builder, [
+        `let token_program = solana_address::address!("${TOKEN_PROGRAM_ADDRESS}");`,
+        'pub fn ata(&mut self',
+    ]);
+});
+
+test('it keeps a pinned account referenced from a conditional branch', () => {
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+                instructionAccountNode({
+                    defaultValue: conditionalValueNode({
+                        condition: accountValueNode('tokenProgram'),
+                        ifFalse: publicKeyValueNode(RENT_SYSVAR_ADDRESS),
+                        ifTrue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS),
+                    }),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'target',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    // The conditional's own condition reads the account, so the scan has to recurse into it.
+    codeContains(builderSectionOf(content), ['pub fn token_program(&mut self']);
+});
+
+test('it drops nothing from an instruction with a resolver in its byte deltas', () => {
+    // A resolver body is opaque here and may read any account.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            byteDeltas: [instructionByteDeltaNode(resolverValueNode('resolveByteDelta'))],
+            name: 'myInstruction',
+        }),
+    );
+
+    codeContains(builderSectionOf(content), ['pub fn token_program(&mut self']);
+});
+
+test('it drops nothing from an instruction with a resolver in its remaining accounts', () => {
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            name: 'myInstruction',
+            remainingAccounts: [instructionRemainingAccountsNode(resolverValueNode('resolveRemainingAccounts'))],
+        }),
+    );
+
+    codeContains(builderSectionOf(content), ['pub fn token_program(&mut self']);
+});
+
+test('it drops an account defaulting to a linked program', () => {
+    // A `programLinkNode` account is a required builder parameter, so dropping it changes `new()`.
+    const node = rootNode(
+        programNode({
+            instructions: [
+                instructionNode({
+                    accounts: [
+                        instructionAccountNode({
+                            isOptional: false,
+                            isSigner: true,
+                            isWritable: false,
+                            name: 'payer',
+                        }),
+                        instructionAccountNode({
+                            defaultValue: programLinkNode('splToken'),
+                            isOptional: false,
+                            isSigner: false,
+                            isWritable: false,
+                            name: 'tokenProgram',
+                        }),
+                    ],
+                    name: 'myInstruction',
+                }),
+            ],
+            name: 'testProgram',
+            publicKey: '11111111111111111111111111111111',
+        }),
+        [programNode({ name: 'splToken', publicKey: TOKEN_PROGRAM_ADDRESS })],
+    );
+    const content = getFromRenderMap(visit(node, getRenderMapVisitor()), 'instructions/my_instruction.rs').content;
+    const builder = builderSectionOf(content);
+
+    codeContains(builder, [
+        `let token_program = solana_address::address!("${TOKEN_PROGRAM_ADDRESS}");`,
+        /pub fn new\([^)]*payer: solana_address::Address/,
+    ]);
+    codeDoesNotContains(builder, [/pub fn new\([^)]*token_program/, 'self.token_program']);
+});
+
+test('it drops an account defaulting to an inline PDA with only constant seeds', () => {
+    // Given an inline `pdaNode` — the shape a cross-program derivation keeps — with constant seeds
+    // only, which the renderer would otherwise derive at runtime.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'payer' }),
+                instructionAccountNode({
+                    defaultValue: pdaValueNode(
+                        pdaNode({
+                            name: 'treasury',
+                            programId: TOKEN_PROGRAM_ADDRESS,
+                            seeds: [constantPdaSeedNodeFromString('utf8', 'treasury')],
+                        }),
+                        [],
+                    ),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: true,
+                    name: 'treasury',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const builder = builderSectionOf(content);
+
+    // The address is bound literally: an inline PDA has no `pdas/` page to read a constant from.
+    codeContains(builder, ['let treasury = solana_address::address!("']);
+    codeDoesNotContains(builder, ['pub fn treasury(&mut self', 'find_program_address', 'self.treasury']);
+});
+
+test('it keeps a pinned account on the accounts struct and the CPI builder', () => {
+    // Only the plain builder may drop a pinned account: the accounts struct is the escape hatch for
+    // callers who must pass a different address, and CPI takes `AccountInfo`s, not constants.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: true, isWritable: false, name: 'payer' }),
+                instructionAccountNode({
+                    defaultValue: publicKeyValueNode(TOKEN_PROGRAM_ADDRESS, 'tokenProgram'),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'tokenProgram',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    codeDoesNotContains(builderSectionOf(content), ['pub fn token_program(&mut self']);
+    codeContains(content, [
+        /pub struct MyInstruction \{[^}]*pub token_program: solana_address::Address/,
+        /pub struct MyInstructionCpiAccounts<[^{]*\{[^}]*pub token_program: &'b solana_account_info::AccountInfo/,
+        /pub struct MyInstructionCpi<[^{]*\{[^}]*pub token_program: &'b solana_account_info::AccountInfo/,
+        /struct MyInstructionCpiBuilderInstruction<[^{]*\{[^}]*token_program: &'b solana_account_info::AccountInfo/,
+    ]);
+});
+
+test('it lets the CPI builder keep offering an account the plain builder fixes', () => {
+    // A `programIdValueNode` is the one fixed shape CPI can default for itself, resolving to the
+    // `__program` account info it already holds; every other becomes a required CPI parameter.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({ isOptional: false, isSigner: false, isWritable: false, name: 'owner' }),
+                instructionAccountNode({
+                    defaultValue: programIdValueNode(),
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name: 'selfProgram',
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+    const cpi = content.substring(content.indexOf('Instruction builder for `MyInstruction` via CPI'));
+
+    // The two builders describe the same account differently on purpose: the plain one says what it
+    // bound, the CPI one keeps the setter it can honour.
+    codeContains(builderSectionOf(content), [
+        "///   1. `[]` self_program (fixed to '11111111111111111111111111111111')",
+    ]);
+    codeContains(cpi, ['///   1. `[optional]` self_program', 'pub fn self_program(&mut self']);
+});
+
+// `hasSyntheticDefault` asserts a fact about a list in another package: which defaults
+// `getCommonInstructionAccountDefaultRules` invents from an account's name. Only these two tests tie
+// it to that list, so a rule added or reshaped there starts silently dropping guessed accounts.
+
+/** The kinds a fixed address can resolve from. */
+const ADDRESS_KINDS = ['pdaValueNode', 'programIdValueNode', 'programLinkNode', 'publicKeyValueNode'];
+/** Kinds that name a caller, so they never resolve to an address and can never be dropped. */
+const CALLER_KINDS = ['identityValueNode', 'payerValueNode'];
+
+/**
+ * An account name the rule matches, derived from its pattern: first branch of every alternation, plus
+ * every optional part. Asserted against the rule itself, so a pattern shape this cannot handle fails
+ * loudly rather than quietly testing the wrong name.
+ */
+function accountNameMatching(pattern: RegExp | string): string {
+    if (typeof pattern === 'string') return pattern;
+    let source = pattern.source.replace(/^\^/, '').replace(/\$$/, '');
+    while (source.includes('(')) {
+        source = source.replace(/\(([^()]*)\)/, (_, group: string) => group.split('|')[0]);
+    }
+    const name = source.replace(/\?/g, '');
+    expect(pattern.test(name), `derived "${name}" does not match ${pattern}`).toBe(true);
+    return name;
+}
+
+test('every common account-default rule produces a kind hasSyntheticDefault has been taught about', () => {
+    const kinds = [...new Set(getCommonInstructionAccountDefaultRules().map(rule => rule.defaultValue.kind))];
+
+    // A kind outside both sets is new: teach `hasSyntheticDefault` about it before adding it here.
+    expect(kinds.filter(kind => !ADDRESS_KINDS.includes(kind) && !CALLER_KINDS.includes(kind))).toEqual([]);
+});
+
+test.each(
+    getCommonInstructionAccountDefaultRules()
+        .filter(rule => ADDRESS_KINDS.includes(rule.defaultValue.kind))
+        .map(rule => [accountNameMatching(rule.account), rule] as const),
+)('it keeps %s, whose default the common rules invent from its name', (name, rule) => {
+    // Given an account as `setInstructionAccountDefaultValuesVisitor` leaves it: unconstrained by the
+    // program, so only its name suggested the address.
+    const content = renderMyInstruction(
+        instructionNode({
+            accounts: [
+                instructionAccountNode({
+                    defaultValue: rule.defaultValue,
+                    isOptional: false,
+                    isSigner: false,
+                    isWritable: false,
+                    name,
+                }),
+            ],
+            name: 'myInstruction',
+        }),
+    );
+
+    codeContains(builderSectionOf(content), [new RegExp(`pub fn ${snakeCase(name)}\\(&mut self`)]);
 });

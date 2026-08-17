@@ -118,16 +118,14 @@ impl UpdateGuardInstructionArgs {
 ///   1. `[]` mint
 ///   2. `[optional]` token_account (default to PDA derived from 'tokenAccount')
 ///   3. `[signer]` guard_authority
-///   4. `[optional]` token_program (default to `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`)
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[]` token_program (fixed to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
+///   5. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct UpdateGuardBuilder {
     guard: Option<solana_address::Address>,
     mint: solana_address::Address,
     token_account: Option<solana_address::Address>,
     guard_authority: solana_address::Address,
-    token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     cpi_rule: Option<CpiRule>,
     transfer_amount_rule: Option<TransferAmountRule>,
     additional_fields_rule: Vec<MetadataAdditionalFieldRule>,
@@ -145,8 +143,6 @@ impl UpdateGuardBuilder {
             mint,
             token_account: None,
             guard_authority,
-            token_program: None,
-            system_program: None,
             cpi_rule: None,
             transfer_amount_rule: None,
             additional_fields_rule,
@@ -163,18 +159,6 @@ impl UpdateGuardBuilder {
     #[inline(always)]
     pub fn token_account(&mut self, token_account: solana_address::Address) -> &mut Self {
         self.token_account = Some(token_account);
-        self
-    }
-    /// `[optional account, default to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']`
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// `[optional argument]`
@@ -225,12 +209,8 @@ impl UpdateGuardBuilder {
             )
             .0
         });
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let token_program = solana_address::address!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = UpdateGuard {
             guard,
             mint,

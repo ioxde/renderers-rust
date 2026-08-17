@@ -38,6 +38,60 @@
             }
           ],
           "docs": ["A PDA with only constant seeds — address is deterministic."]
+        },
+        {
+          "kind": "pdaNode",
+          "name": "optionalDerivedSeed",
+          "seeds": [
+            {
+              "kind": "constantPdaSeedNode",
+              "type": { "kind": "stringTypeNode", "encoding": "utf8" },
+              "value": { "kind": "stringValueNode", "string": "optional_seed" }
+            },
+            {
+              "kind": "variablePdaSeedNode",
+              "name": "owner",
+              "type": { "kind": "publicKeyTypeNode" },
+              "docs": []
+            }
+          ],
+          "docs": ["Defaulted onto IDL-optional accounts, whose builder local keeps its Option."]
+        },
+        {
+          "kind": "pdaNode",
+          "name": "dependentOnOptional",
+          "seeds": [
+            {
+              "kind": "constantPdaSeedNode",
+              "type": { "kind": "stringTypeNode", "encoding": "utf8" },
+              "value": { "kind": "stringValueNode", "string": "dependent" }
+            },
+            {
+              "kind": "variablePdaSeedNode",
+              "name": "source",
+              "type": { "kind": "publicKeyTypeNode" },
+              "docs": []
+            }
+          ],
+          "docs": ["Seeded by an IDL-optional account that itself carries a PDA default."]
+        },
+        {
+          "kind": "pdaNode",
+          "name": "crossProgramDerived",
+          "seeds": [
+            {
+              "kind": "constantPdaSeedNode",
+              "type": { "kind": "stringTypeNode", "encoding": "utf8" },
+              "value": { "kind": "stringValueNode", "string": "cross_program" }
+            },
+            {
+              "kind": "variablePdaSeedNode",
+              "name": "authority",
+              "type": { "kind": "publicKeyTypeNode" },
+              "docs": []
+            }
+          ],
+          "docs": ["Every usage supplies the deriving program, so the helper takes one."]
         }
       ],
       "accounts": [],
@@ -280,6 +334,208 @@
             }
           ],
           "arguments": []
+        },
+        {
+          "kind": "instructionNode",
+          "name": "instruction11",
+          "optionalAccountStrategy": "programId",
+          "docs": ["Testing an IDL-optional pda-defaulted account read as another PDA's seed"],
+          "accounts": [
+            {
+              "kind": "instructionAccountNode",
+              "name": "owner",
+              "isWritable": false,
+              "isSigner": true,
+              "isOptional": false,
+              "docs": []
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "optionalDerived",
+              "isWritable": false,
+              "isSigner": false,
+              "isOptional": true,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaLinkNode",
+                  "name": "optionalDerivedSeed"
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "owner",
+                    "value": { "kind": "accountValueNode", "name": "owner" }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "dependent",
+              "isWritable": true,
+              "isSigner": false,
+              "isOptional": false,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaLinkNode",
+                  "name": "dependentOnOptional"
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "source",
+                    "value": { "kind": "accountValueNode", "name": "optionalDerived" }
+                  }
+                ]
+              }
+            }
+          ],
+          "arguments": [],
+          "remainingAccounts": []
+        },
+        {
+          "kind": "instructionNode",
+          "name": "instruction12",
+          "optionalAccountStrategy": "programId",
+          "docs": ["Testing an IDL-optional pda-defaulted account read as a PDA's dynamic deriving program"],
+          "accounts": [
+            {
+              "kind": "instructionAccountNode",
+              "name": "authority",
+              "isWritable": false,
+              "isSigner": true,
+              "isOptional": false,
+              "docs": []
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "optionalProgram",
+              "isWritable": false,
+              "isSigner": false,
+              "isOptional": true,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaLinkNode",
+                  "name": "optionalDerivedSeed"
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "owner",
+                    "value": { "kind": "accountValueNode", "name": "authority" }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "crossDerived",
+              "isWritable": true,
+              "isSigner": false,
+              "isOptional": false,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaLinkNode",
+                  "name": "crossProgramDerived"
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "authority",
+                    "value": { "kind": "accountValueNode", "name": "authority" }
+                  }
+                ],
+                "programId": { "kind": "accountValueNode", "name": "optionalProgram" }
+              }
+            }
+          ],
+          "arguments": [],
+          "remainingAccounts": []
+        },
+        {
+          "kind": "instructionNode",
+          "name": "instruction13",
+          "optionalAccountStrategy": "programId",
+          "docs": ["Testing an IDL-optional pda-defaulted account read as an inline cross-program PDA's seed"],
+          "accounts": [
+            {
+              "kind": "instructionAccountNode",
+              "name": "payer",
+              "isWritable": true,
+              "isSigner": true,
+              "isOptional": false,
+              "docs": []
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "optionalDerived",
+              "isWritable": false,
+              "isSigner": false,
+              "isOptional": true,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaLinkNode",
+                  "name": "optionalDerivedSeed"
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "owner",
+                    "value": { "kind": "accountValueNode", "name": "payer" }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "instructionAccountNode",
+              "name": "inlineDerived",
+              "isWritable": true,
+              "isSigner": false,
+              "isOptional": false,
+              "docs": [],
+              "defaultValue": {
+                "kind": "pdaValueNode",
+                "pda": {
+                  "kind": "pdaNode",
+                  "name": "inlineDerived",
+                  "programId": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+                  "seeds": [
+                    {
+                      "kind": "constantPdaSeedNode",
+                      "type": { "kind": "stringTypeNode", "encoding": "utf8" },
+                      "value": { "kind": "stringValueNode", "string": "inline" }
+                    },
+                    {
+                      "kind": "variablePdaSeedNode",
+                      "name": "source",
+                      "type": { "kind": "publicKeyTypeNode" },
+                      "docs": []
+                    }
+                  ],
+                  "docs": []
+                },
+                "seeds": [
+                  {
+                    "kind": "pdaSeedValueNode",
+                    "name": "source",
+                    "value": { "kind": "accountValueNode", "name": "optionalDerived" }
+                  }
+                ]
+              }
+            }
+          ],
+          "arguments": [],
+          "remainingAccounts": []
         }
       ],
       "definedTypes": [],

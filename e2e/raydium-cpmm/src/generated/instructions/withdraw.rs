@@ -158,35 +158,31 @@ impl WithdrawInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[signer]` owner
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL')
 ///   2. `[writable]` pool_state
 ///   3. `[writable]` owner_lp_token
 ///   4. `[writable]` token0_account
 ///   5. `[writable]` token1_account
 ///   6. `[writable]` token0_vault
 ///   7. `[writable]` token1_vault
-///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   9. `[optional]` token_program2022 (default to `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`)
+///   8. `[]` token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   9. `[]` token_program2022 (fixed to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
 ///   10. `[]` vault0_mint
 ///   11. `[]` vault1_mint
 ///   12. `[writable]` lp_mint
-///   13. `[optional]` memo_program (default to `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`)
+///   13. `[]` memo_program (fixed to 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr')
 #[derive(Clone, Debug)]
 pub struct WithdrawBuilder {
     owner: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     owner_lp_token: solana_address::Address,
     token0_account: solana_address::Address,
     token1_account: solana_address::Address,
     token0_vault: solana_address::Address,
     token1_vault: solana_address::Address,
-    token_program: Option<solana_address::Address>,
-    token_program2022: Option<solana_address::Address>,
     vault0_mint: solana_address::Address,
     vault1_mint: solana_address::Address,
     lp_mint: solana_address::Address,
-    memo_program: Option<solana_address::Address>,
     lp_token_amount: u64,
     minimum_token0_amount: u64,
     minimum_token1_amount: u64,
@@ -211,51 +207,20 @@ impl WithdrawBuilder {
     ) -> Self {
         Self {
             owner,
-            authority: None,
             pool_state,
             owner_lp_token,
             token0_account,
             token1_account,
             token0_vault,
             token1_vault,
-            token_program: None,
-            token_program2022: None,
             vault0_mint,
             vault1_mint,
             lp_mint,
-            memo_program: None,
             lp_token_amount,
             minimum_token0_amount,
             minimum_token1_amount,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// token Program
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']`
-    /// Token program 2022
-    #[inline(always)]
-    pub fn token_program2022(&mut self, token_program2022: solana_address::Address) -> &mut Self {
-        self.token_program2022 = Some(token_program2022);
-        self
-    }
-    /// `[optional account, default to 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr']`
-    /// memo program
-    #[inline(always)]
-    pub fn memo_program(&mut self, memo_program: solana_address::Address) -> &mut Self {
-        self.memo_program = Some(memo_program);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -275,25 +240,20 @@ impl WithdrawBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let owner = self.owner;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let owner_lp_token = self.owner_lp_token;
         let token0_account = self.token0_account;
         let token1_account = self.token1_account;
         let token0_vault = self.token0_vault;
         let token1_vault = self.token1_vault;
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let token_program2022 = self.token_program2022.unwrap_or(solana_address::address!(
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        ));
+        let token_program = solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let token_program2022 =
+            solana_address::address!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
         let vault0_mint = self.vault0_mint;
         let vault1_mint = self.vault1_mint;
         let lp_mint = self.lp_mint;
-        let memo_program = self.memo_program.unwrap_or(solana_address::address!(
-            "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
-        ));
+        let memo_program = solana_address::address!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
         let accounts = Withdraw {
             owner,
             authority,

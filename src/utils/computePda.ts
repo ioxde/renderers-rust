@@ -19,8 +19,14 @@ const MAX_SEED_LENGTH = 32;
 /** A derivation takes at most 16 seeds, and `find_program_address` spends the last one on the bump. */
 const MAX_SEEDS_WITH_BUMP = 15;
 
-function isOnCurve(bytes: Uint8Array): boolean {
-    return ed25519.utils.isValidPublicKey(bytes);
+/**
+ * Whether 32 bytes decompress to an ed25519 point, and so cannot be a program derived address.
+ * `zip215` matches `curve25519-dalek` behind the runtime's `is_on_curve`, which reduces y mod p and
+ * ignores the x-sign bit at x = 0; stricter RFC 8032 rules would fold a constant at a bump the
+ * runtime skips.
+ */
+export function isOnCurve(bytes: Uint8Array): boolean {
+    return ed25519.utils.isValidPublicKey(bytes, true);
 }
 
 /**
@@ -31,7 +37,9 @@ export function findProgramAddress(
     seeds: Uint8Array[],
     programId: Uint8Array,
 ): { address: string; bump: number } | null {
-    for (let bump = 255; bump >= 0; bump--) {
+    // Stops at 1 like the runtime: bump 0 is never returned, so an address folded there is one no
+    // caller can re-derive.
+    for (let bump = 255; bump >= 1; bump--) {
         const hash = createHash('sha256');
         for (const seed of seeds) {
             hash.update(seed);

@@ -214,7 +214,7 @@ impl CreateRealmInstructionArgs {
 ///   2. `[]` community_token_mint
 ///   3. `[writable]` community_token_holding_account
 ///   4. `[writable, signer]` payer
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   5. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
 ///   7. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
 ///   8. `[optional]` council_token_mint
@@ -231,7 +231,6 @@ pub struct CreateRealmBuilder {
     community_token_mint: solana_address::Address,
     community_token_holding_account: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     token_program: Option<solana_address::Address>,
     rent: Option<solana_address::Address>,
     council_token_mint: Option<solana_address::Address>,
@@ -263,7 +262,6 @@ impl CreateRealmBuilder {
             community_token_mint,
             community_token_holding_account,
             payer,
-            system_program: None,
             token_program: None,
             rent: None,
             council_token_mint: None,
@@ -277,13 +275,6 @@ impl CreateRealmBuilder {
             config_args,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// System Program
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
     /// SPL Token Program
@@ -383,9 +374,7 @@ impl CreateRealmBuilder {
         let community_token_mint = self.community_token_mint;
         let community_token_holding_account = self.community_token_holding_account;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let token_program = self.token_program.unwrap_or(solana_address::address!(
             "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         ));

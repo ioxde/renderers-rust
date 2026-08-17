@@ -4,6 +4,9 @@
     {% set _ = pdaResolved.push(account.name) %}
   {% endif %}
 {% endfor %}
+{#- An account in `builderFixedAccounts` gets no field, no `new()` parameter and no setter: the program
+    rejects every address but the one `instruction()` binds it to. The accounts struct above and the
+    CPI builder below still take every account. -#}
 /// Instruction builder for `{{ instruction.name | pascalCase }}`.
 ///
 /// ### Accounts:
@@ -17,21 +20,38 @@
     {% set modifiers = modifiers + ', signer' if modifiers.length > 0 else 'signer' %}
   {% endif %}
   {% set isBuilderOptional = account.name in builderOptionalAccounts %}
-  {% if isBuilderOptional %}
+  {% set isBuilderFixed = account.name in builderFixedAccounts %}
+  {% if isBuilderOptional and not isBuilderFixed %}
     {% set modifiers = modifiers + ', optional' if modifiers.length > 0 else 'optional' %}
   {% endif %}
-  {{ '///   ' + loop.index0 + '. `[' + modifiers + ']` ' + account.name | snakeCase }}
-  {{- " (default to `" + account.defaultValue.publicKey + "`)" if account.defaultValue.kind === 'publicKeyValueNode' }}
-  {{- " (default to PDA derived from '" + account.defaultValue.pda.name + "')" if account.defaultValue.kind === 'pdaValueNode' and account.name in pdaResolved }}
+  {#- Build the suffix first and emit the line once, or each branch pays its own newline. -#}
+  {% set docSuffix = '' %}
+  {#- The indices are meta positions: dropping a fixed account's line would read as an account the
+      transaction omits rather than one the builder binds. -#}
+  {% if isBuilderFixed %}
+    {% set docSuffix = " (fixed to '" + builderFixedAddresses[account.name] + "')" %}
+  {#- No default is ever applied to an IDL-optional account, so none may be advertised. -#}
+  {% elif not account.isOptional %}
+    {% if account.defaultValue.kind === 'publicKeyValueNode' %}
+      {% set docSuffix = " (default to `" + account.defaultValue.publicKey + "`)" %}
+    {% elif account.defaultValue.kind === 'pdaValueNode' and account.name in pdaResolved %}
+      {% set docSuffix = " (default to PDA derived from '" + account.defaultValue.pda.name + "')" %}
+    {% endif %}
+  {% endif %}
+  {% set docName = account.name | snakeCase %}
+  {{ '///   ' + loop.index0 + '. `[' + modifiers + ']` ' + docName + docSuffix }}
 {% endfor %}
 #[derive(Clone, Debug{{ ', Default' if not hasRequiredAccounts and not hasRequiredArgs }})]
 pub struct {{ instruction.name | pascalCase }}Builder {
   {% for account in instruction.accounts %}
     {% set isBuilderOptional = account.name in builderOptionalAccounts %}
-    {% if account.isSigner === 'either' %}
-      {{ account.name | snakeCase }}: {{ 'Option<(solana_address::Address, bool)>' if isBuilderOptional else '(solana_address::Address, bool)' }},
-    {% else %}
-      {{ account.name | snakeCase }}: {{ 'Option<solana_address::Address>' if isBuilderOptional else 'solana_address::Address' }},
+    {% set isBuilderFixed = account.name in builderFixedAccounts %}
+    {% if not isBuilderFixed %}
+      {% if account.isSigner === 'either' %}
+        {{ account.name | snakeCase }}: {{ 'Option<(solana_address::Address, bool)>' if isBuilderOptional else '(solana_address::Address, bool)' }},
+      {% else %}
+        {{ account.name | snakeCase }}: {{ 'Option<solana_address::Address>' if isBuilderOptional else 'solana_address::Address' }},
+      {% endif %}
     {% endif %}
   {% endfor %}
   {% for arg in instructionArgs %}
@@ -55,7 +75,8 @@ impl {{ instruction.name | pascalCase }}Builder {
     pub fn new(
       {% for account in instruction.accounts %}
         {% set isBuilderOptional = account.name in builderOptionalAccounts %}
-        {% if not isBuilderOptional %}
+        {% set isBuilderFixed = account.name in builderFixedAccounts %}
+        {% if not isBuilderOptional and not isBuilderFixed %}
           {{ account.name | snakeCase }}: {{ '(solana_address::Address, bool)' if account.isSigner === 'either' else 'solana_address::Address' }},
         {% endif %}
       {% endfor %}
@@ -71,10 +92,13 @@ impl {{ instruction.name | pascalCase }}Builder {
       Self {
         {% for account in instruction.accounts %}
           {% set isBuilderOptional = account.name in builderOptionalAccounts %}
-          {% if isBuilderOptional %}
-            {{ account.name | snakeCase }}: None,
-          {% else %}
-            {{ account.name | snakeCase }},
+          {% set isBuilderFixed = account.name in builderFixedAccounts %}
+          {% if not isBuilderFixed %}
+            {% if isBuilderOptional %}
+              {{ account.name | snakeCase }}: None,
+            {% else %}
+              {{ account.name | snakeCase }},
+            {% endif %}
           {% endif %}
         {% endfor %}
         {% for arg in instructionArgs %}
@@ -99,7 +123,8 @@ impl {{ instruction.name | pascalCase }}Builder {
   {% endif %}
   {% for account in instruction.accounts %}
     {% set isBuilderOptional = account.name in builderOptionalAccounts %}
-    {% if isBuilderOptional %}
+    {% set isBuilderFixed = account.name in builderFixedAccounts %}
+    {% if isBuilderOptional and not isBuilderFixed %}
       {% if account.isOptional %}
         {{ '/// `[optional account]`\n' -}}
       {% else %}
@@ -157,7 +182,13 @@ impl {{ instruction.name | pascalCase }}Builder {
   #[allow(clippy::clone_on_copy)]
   pub fn instruction(&self) -> solana_instruction::Instruction {
     {% for account in resolvedAccounts %}
-      {% if account.pdaDefault %}
+      {% if account.name in builderFixedAccounts %}
+    let {{ account.name | snakeCase }} = {{ builderFixedAccounts[account.name] }};
+      {#- Must stay ahead of the default branches: the accounts struct holds `Option<Address>` here, so
+          applying a default would both fail to compile and put omission out of the caller's reach. -#}
+      {% elif account.isOptional %}
+    let {{ account.name | snakeCase }} = self.{{ account.name | snakeCase }};
+      {% elif account.pdaDefault %}
         {% if account.pdaDefault.isLinked and account.pdaDefault.isFolded %}
           {% if account.isSigner === 'either' %}
     let {{ account.name | snakeCase }} = self.{{ account.name | snakeCase }}.map(|(k, _)| k).unwrap_or(
@@ -193,8 +224,6 @@ impl {{ instruction.name | pascalCase }}Builder {
           {% endif %}
     });
         {% endif %}
-      {% elif account.isOptional %}
-    let {{ account.name | snakeCase }} = self.{{ account.name | snakeCase }};
       {% elif account.defaultValue.kind === 'programIdValueNode' %}
     let {{ account.name | snakeCase }} = self.{{ account.name | snakeCase }}.unwrap_or(crate::{{ program.name | snakeCase | upper }}_ID);
       {% elif account.defaultValue.kind === 'publicKeyValueNode' %}

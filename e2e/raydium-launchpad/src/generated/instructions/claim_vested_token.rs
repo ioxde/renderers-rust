@@ -121,27 +121,23 @@ impl Default for ClaimVestedTokenInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` beneficiary
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   2. `[writable]` pool_state
 ///   3. `[writable, optional]` vesting_record (default to PDA derived from 'vestingRecord')
 ///   4. `[writable]` base_vault
 ///   5. `[writable, signer]` user_base_token
 ///   6. `[]` base_token_mint
-///   7. `[optional]` base_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   9. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+///   7. `[]` base_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   8. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   9. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
 #[derive(Clone, Debug)]
 pub struct ClaimVestedTokenBuilder {
     beneficiary: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     vesting_record: Option<solana_address::Address>,
     base_vault: solana_address::Address,
     user_base_token: solana_address::Address,
     base_token_mint: solana_address::Address,
-    base_token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    associated_token_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -155,56 +151,19 @@ impl ClaimVestedTokenBuilder {
     ) -> Self {
         Self {
             beneficiary,
-            authority: None,
             pool_state,
             vesting_record: None,
             base_vault,
             user_base_token,
             base_token_mint,
-            base_token_program: None,
-            system_program: None,
-            associated_token_program: None,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault and mint operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
     /// `[optional account, default to PDA derived from 'vestingRecord']`
     /// The vesting record account
     #[inline(always)]
     pub fn vesting_record(&mut self, vesting_record: solana_address::Address) -> &mut Self {
         self.vesting_record = Some(vesting_record);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the base token
-    /// Must be the standard Token program
-    #[inline(always)]
-    pub fn base_token_program(&mut self, base_token_program: solana_address::Address) -> &mut Self {
-        self.base_token_program = Some(base_token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    /// Required for associated token program
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -225,7 +184,7 @@ impl ClaimVestedTokenBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let beneficiary = self.beneficiary;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let vesting_record = self.vesting_record.unwrap_or_else(|| {
             crate::pdas::find_vesting_record_pda(&self.pool_state, &self.beneficiary).0
@@ -233,17 +192,11 @@ impl ClaimVestedTokenBuilder {
         let base_vault = self.base_vault;
         let user_base_token = self.user_base_token;
         let base_token_mint = self.base_token_mint;
-        let base_token_program = self.base_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let base_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
         let accounts = ClaimVestedToken {
             beneficiary,
             authority,

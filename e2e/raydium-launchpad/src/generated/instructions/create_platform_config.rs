@@ -122,14 +122,13 @@ impl CreatePlatformConfigInstructionArgs {
 ///   1. `[]` platform_fee_wallet
 ///   2. `[]` platform_nft_wallet
 ///   3. `[writable, optional]` platform_config (default to PDA derived from 'platformConfig')
-///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreatePlatformConfigBuilder {
     platform_admin: solana_address::Address,
     platform_fee_wallet: solana_address::Address,
     platform_nft_wallet: solana_address::Address,
     platform_config: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     migrate_nft_info: MigrateNftInfo,
     fee_rate: u64,
     name: String,
@@ -154,7 +153,6 @@ impl CreatePlatformConfigBuilder {
             platform_fee_wallet,
             platform_nft_wallet,
             platform_config: None,
-            system_program: None,
             migrate_nft_info,
             fee_rate,
             name,
@@ -168,13 +166,6 @@ impl CreatePlatformConfigBuilder {
     #[inline(always)]
     pub fn platform_config(&mut self, platform_config: solana_address::Address) -> &mut Self {
         self.platform_config = Some(platform_config);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -200,9 +191,7 @@ impl CreatePlatformConfigBuilder {
         let platform_config = self
             .platform_config
             .unwrap_or_else(|| crate::pdas::find_platform_config_pda(&self.platform_admin).0);
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreatePlatformConfig {
             platform_admin,
             platform_fee_wallet,

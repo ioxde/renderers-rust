@@ -206,7 +206,7 @@ impl SetRealmConfigInstructionArgs {
 ///   1. `[signer]` realm_authority
 ///   2. `[optional]` council_token_mint
 ///   3. `[writable, optional]` council_token_holding_account
-///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   5. `[writable]` realm_config
 ///   6. `[optional]` community_voter_weight_addin_program_id
 ///   7. `[optional]` max_community_voter_weight_addin_program_id
@@ -219,7 +219,6 @@ pub struct SetRealmConfigBuilder {
     realm_authority: solana_address::Address,
     council_token_mint: Option<solana_address::Address>,
     council_token_holding_account: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     realm_config: solana_address::Address,
     community_voter_weight_addin_program_id: Option<solana_address::Address>,
     max_community_voter_weight_addin_program_id: Option<solana_address::Address>,
@@ -242,7 +241,6 @@ impl SetRealmConfigBuilder {
             realm_authority,
             council_token_mint: None,
             council_token_holding_account: None,
-            system_program: None,
             realm_config,
             community_voter_weight_addin_program_id: None,
             max_community_voter_weight_addin_program_id: None,
@@ -274,12 +272,6 @@ impl SetRealmConfigBuilder {
         council_token_holding_account: Option<solana_address::Address>,
     ) -> &mut Self {
         self.council_token_holding_account = council_token_holding_account;
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// `[optional account]`
@@ -351,9 +343,7 @@ impl SetRealmConfigBuilder {
         let realm_authority = self.realm_authority;
         let council_token_mint = self.council_token_mint;
         let council_token_holding_account = self.council_token_holding_account;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let realm_config = self.realm_config;
         let community_voter_weight_addin_program_id = self.community_voter_weight_addin_program_id;
         let max_community_voter_weight_addin_program_id =

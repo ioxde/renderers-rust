@@ -157,7 +157,7 @@ impl SwapBaseInputInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[signer]` payer
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL')
 ///   2. `[]` amm_config
 ///   3. `[writable]` pool_state
 ///   4. `[writable]` input_token_account
@@ -172,7 +172,6 @@ impl SwapBaseInputInstructionArgs {
 #[derive(Clone, Debug)]
 pub struct SwapBaseInputBuilder {
     payer: solana_address::Address,
-    authority: Option<solana_address::Address>,
     amm_config: solana_address::Address,
     pool_state: solana_address::Address,
     input_token_account: solana_address::Address,
@@ -208,7 +207,6 @@ impl SwapBaseInputBuilder {
     ) -> Self {
         Self {
             payer,
-            authority: None,
             amm_config,
             pool_state,
             input_token_account,
@@ -224,12 +222,6 @@ impl SwapBaseInputBuilder {
             minimum_amount_out,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -249,7 +241,7 @@ impl SwapBaseInputBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let payer = self.payer;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let amm_config = self.amm_config;
         let pool_state = self.pool_state;
         let input_token_account = self.input_token_account;

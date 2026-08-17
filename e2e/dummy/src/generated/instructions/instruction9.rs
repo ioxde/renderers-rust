@@ -63,22 +63,15 @@ impl Default for Instruction9InstructionData {
 ///
 /// ### Accounts:
 ///
-///   0. `[optional]` global_config (default to PDA derived from 'globalConfig')
+///   0. `[]` global_config (fixed to '9gM2qHs9cK8n6DoWe2HsoVjhJzsW9jt4je7r6NNtgRsG')
 #[derive(Clone, Debug, Default)]
 pub struct Instruction9Builder {
-    global_config: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
 impl Instruction9Builder {
     pub fn new() -> Self {
         Self::default()
-    }
-    /// `[optional account, default to PDA derived from 'globalConfig']`
-    #[inline(always)]
-    pub fn global_config(&mut self, global_config: solana_address::Address) -> &mut Self {
-        self.global_config = Some(global_config);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -97,9 +90,7 @@ impl Instruction9Builder {
     }
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let global_config = self
-            .global_config
-            .unwrap_or(crate::pdas::GLOBAL_CONFIG_ADDRESS);
+        let global_config = crate::pdas::GLOBAL_CONFIG_ADDRESS;
         let accounts = Instruction9 { global_config };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)

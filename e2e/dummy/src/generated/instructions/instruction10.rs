@@ -69,11 +69,10 @@ impl Default for Instruction10InstructionData {
 /// ### Accounts:
 ///
 ///   0. `[signer]` owner
-///   1. `[optional]` self_program
+///   1. `[]` self_program (fixed to 'Dummy11111111111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct Instruction10Builder {
     owner: solana_address::Address,
-    self_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -81,14 +80,8 @@ impl Instruction10Builder {
     pub fn new(owner: solana_address::Address) -> Self {
         Self {
             owner,
-            self_program: None,
             __remaining_accounts: Vec::new(),
         }
-    }
-    #[inline(always)]
-    pub fn self_program(&mut self, self_program: solana_address::Address) -> &mut Self {
-        self.self_program = Some(self_program);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -108,7 +101,7 @@ impl Instruction10Builder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let owner = self.owner;
-        let self_program = self.self_program.unwrap_or(crate::DUMMY_ID);
+        let self_program = crate::DUMMY_ID;
         let accounts = Instruction10 {
             owner,
             self_program,

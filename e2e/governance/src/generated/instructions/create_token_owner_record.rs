@@ -103,7 +103,7 @@ impl Default for CreateTokenOwnerRecordInstructionData {
 ///   2. `[writable, optional]` token_owner_record (default to PDA derived from 'tokenOwnerRecord')
 ///   3. `[]` governing_token_mint
 ///   4. `[signer]` payer
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   5. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreateTokenOwnerRecordBuilder {
     realm_account: solana_address::Address,
@@ -111,7 +111,6 @@ pub struct CreateTokenOwnerRecordBuilder {
     token_owner_record: Option<solana_address::Address>,
     governing_token_mint: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -128,7 +127,6 @@ impl CreateTokenOwnerRecordBuilder {
             token_owner_record: None,
             governing_token_mint,
             payer,
-            system_program: None,
             __remaining_accounts: Vec::new(),
         }
     }
@@ -137,12 +135,6 @@ impl CreateTokenOwnerRecordBuilder {
     #[inline(always)]
     pub fn token_owner_record(&mut self, token_owner_record: solana_address::Address) -> &mut Self {
         self.token_owner_record = Some(token_owner_record);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -174,9 +166,7 @@ impl CreateTokenOwnerRecordBuilder {
             .0
         });
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreateTokenOwnerRecord {
             realm_account,
             governing_token_owner_account,

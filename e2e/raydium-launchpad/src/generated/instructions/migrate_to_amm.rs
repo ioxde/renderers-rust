@@ -260,7 +260,7 @@ impl MigrateToAmmInstructionArgs {
 ///   0. `[writable, signer]` payer
 ///   1. `[]` base_mint
 ///   2. `[]` quote_mint
-///   3. `[optional]` openbook_program (default to `srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX`)
+///   3. `[]` openbook_program (fixed to 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX')
 ///   4. `[writable]` market
 ///   5. `[writable]` request_queue
 ///   6. `[writable]` event_queue
@@ -271,30 +271,29 @@ impl MigrateToAmmInstructionArgs {
 ///   11. `[writable]` market_quote_vault
 ///   12. `[optional]` amm_program (default to `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`)
 ///   13. `[writable, optional]` amm_pool (default to PDA derived from 'ammPool')
-///   14. `[optional]` amm_authority (default to PDA derived from 'ammAuthority')
+///   14. `[]` amm_authority (fixed to '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1')
 ///   15. `[writable, optional]` amm_open_orders (default to PDA derived from 'ammOpenOrders')
 ///   16. `[writable, optional]` amm_lp_mint (default to PDA derived from 'ammLpMint')
 ///   17. `[writable, optional]` amm_base_vault (default to PDA derived from 'ammBaseVault')
 ///   18. `[writable, optional]` amm_quote_vault (default to PDA derived from 'ammQuoteVault')
 ///   19. `[writable, optional]` amm_target_orders (default to PDA derived from 'ammTargetOrders')
-///   20. `[optional]` amm_config (default to PDA derived from 'ammConfig')
+///   20. `[]` amm_config (fixed to '9DCxsMizn3H1hprZ7xWe6LDzeUeZBksYFpBWBtSf1PQX')
 ///   21. `[writable]` amm_create_fee_destination
-///   22. `[writable, optional]` authority (default to PDA derived from 'authority')
+///   22. `[writable]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   23. `[writable, optional]` pool_state (default to PDA derived from 'poolState')
 ///   24. `[]` global_config
 ///   25. `[writable]` base_vault
 ///   26. `[writable]` quote_vault
 ///   27. `[writable]` pool_lp_token
-///   28. `[optional]` spl_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   29. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-///   30. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   31. `[optional]` rent_program (default to `SysvarRent111111111111111111111111111111111`)
+///   28. `[]` spl_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   29. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+///   30. `[]` system_program (fixed to '11111111111111111111111111111111')
+///   31. `[]` rent_program (fixed to 'SysvarRent111111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct MigrateToAmmBuilder {
     payer: solana_address::Address,
     base_mint: solana_address::Address,
     quote_mint: solana_address::Address,
-    openbook_program: Option<solana_address::Address>,
     market: solana_address::Address,
     request_queue: solana_address::Address,
     event_queue: solana_address::Address,
@@ -305,24 +304,17 @@ pub struct MigrateToAmmBuilder {
     market_quote_vault: solana_address::Address,
     amm_program: Option<solana_address::Address>,
     amm_pool: Option<solana_address::Address>,
-    amm_authority: Option<solana_address::Address>,
     amm_open_orders: Option<solana_address::Address>,
     amm_lp_mint: Option<solana_address::Address>,
     amm_base_vault: Option<solana_address::Address>,
     amm_quote_vault: Option<solana_address::Address>,
     amm_target_orders: Option<solana_address::Address>,
-    amm_config: Option<solana_address::Address>,
     amm_create_fee_destination: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: Option<solana_address::Address>,
     global_config: solana_address::Address,
     base_vault: solana_address::Address,
     quote_vault: solana_address::Address,
     pool_lp_token: solana_address::Address,
-    spl_token_program: Option<solana_address::Address>,
-    associated_token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
-    rent_program: Option<solana_address::Address>,
     base_lot_size: u64,
     quote_lot_size: u64,
     market_vault_signer_nonce: u8,
@@ -355,7 +347,6 @@ impl MigrateToAmmBuilder {
             payer,
             base_mint,
             quote_mint,
-            openbook_program: None,
             market,
             request_queue,
             event_queue,
@@ -366,35 +357,22 @@ impl MigrateToAmmBuilder {
             market_quote_vault,
             amm_program: None,
             amm_pool: None,
-            amm_authority: None,
             amm_open_orders: None,
             amm_lp_mint: None,
             amm_base_vault: None,
             amm_quote_vault: None,
             amm_target_orders: None,
-            amm_config: None,
             amm_create_fee_destination,
-            authority: None,
             pool_state: None,
             global_config,
             base_vault,
             quote_vault,
             pool_lp_token,
-            spl_token_program: None,
-            associated_token_program: None,
-            system_program: None,
-            rent_program: None,
             base_lot_size,
             quote_lot_size,
             market_vault_signer_nonce,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX']`
-    #[inline(always)]
-    pub fn openbook_program(&mut self, openbook_program: solana_address::Address) -> &mut Self {
-        self.openbook_program = Some(openbook_program);
-        self
     }
     /// `[optional account, default to '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8']`
     #[inline(always)]
@@ -406,12 +384,6 @@ impl MigrateToAmmBuilder {
     #[inline(always)]
     pub fn amm_pool(&mut self, amm_pool: solana_address::Address) -> &mut Self {
         self.amm_pool = Some(amm_pool);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'ammAuthority']`
-    #[inline(always)]
-    pub fn amm_authority(&mut self, amm_authority: solana_address::Address) -> &mut Self {
-        self.amm_authority = Some(amm_authority);
         self
     }
     /// `[optional account, default to PDA derived from 'ammOpenOrders']`
@@ -444,58 +416,12 @@ impl MigrateToAmmBuilder {
         self.amm_target_orders = Some(amm_target_orders);
         self
     }
-    /// `[optional account, default to PDA derived from 'ammConfig']`
-    #[inline(always)]
-    pub fn amm_config(&mut self, amm_config: solana_address::Address) -> &mut Self {
-        self.amm_config = Some(amm_config);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
     /// `[optional account, default to PDA derived from 'poolState']`
     /// Account that stores the pool's state and parameters
     /// PDA generated using POOL_SEED and both token mints
     #[inline(always)]
     pub fn pool_state(&mut self, pool_state: solana_address::Address) -> &mut Self {
         self.pool_state = Some(pool_state);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for the base token
-    /// Must be the standard Token program
-    #[inline(always)]
-    pub fn spl_token_program(&mut self, spl_token_program: solana_address::Address) -> &mut Self {
-        self.spl_token_program = Some(spl_token_program);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    /// Program to create an ATA for receiving fee NFT
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
-    }
-    /// `[optional account, default to 'SysvarRent111111111111111111111111111111111']`
-    /// Required for rent exempt calculations
-    #[inline(always)]
-    pub fn rent_program(&mut self, rent_program: solana_address::Address) -> &mut Self {
-        self.rent_program = Some(rent_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -518,9 +444,8 @@ impl MigrateToAmmBuilder {
         let payer = self.payer;
         let base_mint = self.base_mint;
         let quote_mint = self.quote_mint;
-        let openbook_program = self.openbook_program.unwrap_or(solana_address::address!(
-            "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX"
-        ));
+        let openbook_program =
+            solana_address::address!("srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX");
         let market = self.market;
         let request_queue = self.request_queue;
         let event_queue = self.event_queue;
@@ -535,9 +460,7 @@ impl MigrateToAmmBuilder {
         let amm_pool = self
             .amm_pool
             .unwrap_or_else(|| crate::pdas::find_amm_pool_pda(&self.market).0);
-        let amm_authority = self
-            .amm_authority
-            .unwrap_or(crate::pdas::AMM_AUTHORITY_ADDRESS);
+        let amm_authority = crate::pdas::AMM_AUTHORITY_ADDRESS;
         let amm_open_orders = self
             .amm_open_orders
             .unwrap_or_else(|| crate::pdas::find_amm_open_orders_pda(&self.market).0);
@@ -553,9 +476,9 @@ impl MigrateToAmmBuilder {
         let amm_target_orders = self
             .amm_target_orders
             .unwrap_or_else(|| crate::pdas::find_amm_target_orders_pda(&self.market).0);
-        let amm_config = self.amm_config.unwrap_or(crate::pdas::AMM_CONFIG_ADDRESS);
+        let amm_config = crate::pdas::AMM_CONFIG_ADDRESS;
         let amm_create_fee_destination = self.amm_create_fee_destination;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state.unwrap_or_else(|| {
             crate::pdas::find_pool_state_pda(&self.base_mint, &self.quote_mint).0
         });
@@ -563,20 +486,12 @@ impl MigrateToAmmBuilder {
         let base_vault = self.base_vault;
         let quote_vault = self.quote_vault;
         let pool_lp_token = self.pool_lp_token;
-        let spl_token_program = self.spl_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
+        let spl_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
-        let rent_program = self.rent_program.unwrap_or(solana_address::address!(
-            "SysvarRent111111111111111111111111111111111"
-        ));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
+        let rent_program = solana_address::address!("SysvarRent111111111111111111111111111111111");
         let accounts = MigrateToAmm {
             payer,
             base_mint,

@@ -141,7 +141,7 @@ impl CreateConfigInstructionArgs {
 ///   4. `[]` migrate_fee_owner
 ///   5. `[]` migrate_to_amm_wallet
 ///   6. `[]` migrate_to_cpswap_wallet
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreateConfigBuilder {
     owner: Option<solana_address::Address>,
@@ -151,7 +151,6 @@ pub struct CreateConfigBuilder {
     migrate_fee_owner: solana_address::Address,
     migrate_to_amm_wallet: solana_address::Address,
     migrate_to_cpswap_wallet: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     curve_type: u8,
     index: u16,
     migrate_fee: u64,
@@ -179,7 +178,6 @@ impl CreateConfigBuilder {
             migrate_fee_owner,
             migrate_to_amm_wallet,
             migrate_to_cpswap_wallet,
-            system_program: None,
             curve_type,
             index,
             migrate_fee,
@@ -203,13 +201,6 @@ impl CreateConfigBuilder {
     #[inline(always)]
     pub fn global_config(&mut self, global_config: solana_address::Address) -> &mut Self {
         self.global_config = Some(global_config);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -245,9 +236,7 @@ impl CreateConfigBuilder {
         let migrate_fee_owner = self.migrate_fee_owner;
         let migrate_to_amm_wallet = self.migrate_to_amm_wallet;
         let migrate_to_cpswap_wallet = self.migrate_to_cpswap_wallet;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreateConfig {
             owner,
             global_config,

@@ -169,7 +169,7 @@ impl CreateProgramGovernanceInstructionArgs {
 ///   5. `[]` governing_token_owner_record
 ///   6. `[signer]` payer
 ///   7. `[]` bpf_upgradeable_loader_program
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   8. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   9. `[signer]` governance_authority
 ///   10. `[]` realm_config
 ///   11. `[optional]` voter_weight_record
@@ -183,7 +183,6 @@ pub struct CreateProgramGovernanceBuilder {
     governing_token_owner_record: solana_address::Address,
     payer: solana_address::Address,
     bpf_upgradeable_loader_program: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     governance_authority: solana_address::Address,
     realm_config: solana_address::Address,
     voter_weight_record: Option<solana_address::Address>,
@@ -216,7 +215,6 @@ impl CreateProgramGovernanceBuilder {
             governing_token_owner_record,
             payer,
             bpf_upgradeable_loader_program,
-            system_program: None,
             governance_authority,
             realm_config,
             voter_weight_record: None,
@@ -224,12 +222,6 @@ impl CreateProgramGovernanceBuilder {
             transfer_upgrade_authority,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account]`
     /// Optional Voter Weight Record
@@ -266,9 +258,7 @@ impl CreateProgramGovernanceBuilder {
         let governing_token_owner_record = self.governing_token_owner_record;
         let payer = self.payer;
         let bpf_upgradeable_loader_program = self.bpf_upgradeable_loader_program;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let governance_authority = self.governance_authority;
         let realm_config = self.realm_config;
         let voter_weight_record = self.voter_weight_record;

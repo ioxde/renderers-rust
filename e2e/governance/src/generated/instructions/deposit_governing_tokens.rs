@@ -144,7 +144,7 @@ impl DepositGoverningTokensInstructionArgs {
 ///   4. `[signer]` governing_token_source_account_authority
 ///   5. `[writable]` token_owner_record
 ///   6. `[writable, signer]` payer
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
 ///   9. `[]` realm_config_account
 #[derive(Clone, Debug)]
@@ -156,7 +156,6 @@ pub struct DepositGoverningTokensBuilder {
     governing_token_source_account_authority: solana_address::Address,
     token_owner_record: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     token_program: Option<solana_address::Address>,
     realm_config_account: solana_address::Address,
     amount: u64,
@@ -183,18 +182,11 @@ impl DepositGoverningTokensBuilder {
             governing_token_source_account_authority,
             token_owner_record,
             payer,
-            system_program: None,
             token_program: None,
             realm_config_account,
             amount,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
     #[inline(always)]
@@ -227,9 +219,7 @@ impl DepositGoverningTokensBuilder {
             self.governing_token_source_account_authority;
         let token_owner_record = self.token_owner_record;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let token_program = self.token_program.unwrap_or(solana_address::address!(
             "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         ));

@@ -174,7 +174,7 @@ impl BuyExactInInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[signer]` payer
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh')
 ///   2. `[]` global_config
 ///   3. `[]` platform_config
 ///   4. `[writable]` pool_state
@@ -185,13 +185,12 @@ impl BuyExactInInstructionArgs {
 ///   9. `[]` base_token_mint
 ///   10. `[]` quote_token_mint
 ///   11. `[]` base_token_program
-///   12. `[optional]` quote_token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   13. `[optional]` event_authority (default to PDA derived from 'eventAuthority')
+///   12. `[]` quote_token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   13. `[]` event_authority (fixed to '2DPAtwB8L12vrMRExbLuyGnC7n2J5LNoZQSejeQGpwkr')
 ///   14. `[]` program
 #[derive(Clone, Debug)]
 pub struct BuyExactInBuilder {
     payer: solana_address::Address,
-    authority: Option<solana_address::Address>,
     global_config: solana_address::Address,
     platform_config: solana_address::Address,
     pool_state: solana_address::Address,
@@ -202,8 +201,6 @@ pub struct BuyExactInBuilder {
     base_token_mint: solana_address::Address,
     quote_token_mint: solana_address::Address,
     base_token_program: solana_address::Address,
-    quote_token_program: Option<solana_address::Address>,
-    event_authority: Option<solana_address::Address>,
     program: solana_address::Address,
     amount_in: u64,
     minimum_amount_out: u64,
@@ -231,7 +228,6 @@ impl BuyExactInBuilder {
     ) -> Self {
         Self {
             payer,
-            authority: None,
             global_config,
             platform_config,
             pool_state,
@@ -242,38 +238,12 @@ impl BuyExactInBuilder {
             base_token_mint,
             quote_token_mint,
             base_token_program,
-            quote_token_program: None,
-            event_authority: None,
             program,
             amount_in,
             minimum_amount_out,
             share_fee_rate,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    /// PDA that acts as the authority for pool vault operations
-    /// Generated using AUTH_SEED
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// SPL Token program for quote token transfers
-    #[inline(always)]
-    pub fn quote_token_program(
-        &mut self,
-        quote_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.quote_token_program = Some(quote_token_program);
-        self
-    }
-    /// `[optional account, default to PDA derived from 'eventAuthority']`
-    #[inline(always)]
-    pub fn event_authority(&mut self, event_authority: solana_address::Address) -> &mut Self {
-        self.event_authority = Some(event_authority);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -293,7 +263,7 @@ impl BuyExactInBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let payer = self.payer;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let global_config = self.global_config;
         let platform_config = self.platform_config;
         let pool_state = self.pool_state;
@@ -304,12 +274,9 @@ impl BuyExactInBuilder {
         let base_token_mint = self.base_token_mint;
         let quote_token_mint = self.quote_token_mint;
         let base_token_program = self.base_token_program;
-        let quote_token_program = self.quote_token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let event_authority = self
-            .event_authority
-            .unwrap_or(crate::pdas::EVENT_AUTHORITY_ADDRESS);
+        let quote_token_program =
+            solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let event_authority = crate::pdas::EVENT_AUTHORITY_ADDRESS;
         let program = self.program;
         let accounts = BuyExactIn {
             payer,

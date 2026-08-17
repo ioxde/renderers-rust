@@ -129,9 +129,9 @@ impl CreateGuardInstructionArgs {
 ///   2. `[writable, optional]` mint_token_account (default to PDA derived from 'mintTokenAccount')
 ///   3. `[signer]` guard_authority
 ///   4. `[writable, signer]` payer
-///   5. `[optional]` associated_token_program (default to `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-///   6. `[optional]` token_program (default to `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`)
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   5. `[]` associated_token_program (fixed to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+///   6. `[]` token_program (fixed to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
+///   7. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreateGuardBuilder {
     guard: Option<solana_address::Address>,
@@ -139,9 +139,6 @@ pub struct CreateGuardBuilder {
     mint_token_account: Option<solana_address::Address>,
     guard_authority: solana_address::Address,
     payer: solana_address::Address,
-    associated_token_program: Option<solana_address::Address>,
-    token_program: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     name: String,
     symbol: String,
     uri: String,
@@ -167,9 +164,6 @@ impl CreateGuardBuilder {
             mint_token_account: None,
             guard_authority,
             payer,
-            associated_token_program: None,
-            token_program: None,
-            system_program: None,
             name,
             symbol,
             uri,
@@ -189,27 +183,6 @@ impl CreateGuardBuilder {
     #[inline(always)]
     pub fn mint_token_account(&mut self, mint_token_account: solana_address::Address) -> &mut Self {
         self.mint_token_account = Some(mint_token_account);
-        self
-    }
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_address::Address,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-    /// `[optional account, default to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']`
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// `[optional argument]`
@@ -262,16 +235,9 @@ impl CreateGuardBuilder {
         });
         let payer = self.payer;
         let associated_token_program =
-            self.associated_token_program
-                .unwrap_or(solana_address::address!(
-                    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-                ));
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        ));
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+            solana_address::address!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+        let token_program = solana_address::address!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreateGuard {
             guard,
             mint,

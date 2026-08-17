@@ -151,7 +151,7 @@ impl CollectFundFeeInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[signer]` owner
-///   1. `[optional]` authority (default to PDA derived from 'authority')
+///   1. `[]` authority (fixed to 'GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL')
 ///   2. `[writable]` pool_state
 ///   3. `[]` amm_config
 ///   4. `[writable]` token0_vault
@@ -160,12 +160,11 @@ impl CollectFundFeeInstructionArgs {
 ///   7. `[]` vault1_mint
 ///   8. `[writable]` recipient_token0_account
 ///   9. `[writable]` recipient_token1_account
-///   10. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   11. `[optional]` token_program2022 (default to `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`)
+///   10. `[]` token_program (fixed to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+///   11. `[]` token_program2022 (fixed to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
 #[derive(Clone, Debug)]
 pub struct CollectFundFeeBuilder {
     owner: solana_address::Address,
-    authority: Option<solana_address::Address>,
     pool_state: solana_address::Address,
     amm_config: solana_address::Address,
     token0_vault: solana_address::Address,
@@ -174,8 +173,6 @@ pub struct CollectFundFeeBuilder {
     vault1_mint: solana_address::Address,
     recipient_token0_account: solana_address::Address,
     recipient_token1_account: solana_address::Address,
-    token_program: Option<solana_address::Address>,
-    token_program2022: Option<solana_address::Address>,
     amount0_requested: u64,
     amount1_requested: u64,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -197,7 +194,6 @@ impl CollectFundFeeBuilder {
     ) -> Self {
         Self {
             owner,
-            authority: None,
             pool_state,
             amm_config,
             token0_vault,
@@ -206,32 +202,10 @@ impl CollectFundFeeBuilder {
             vault1_mint,
             recipient_token0_account,
             recipient_token1_account,
-            token_program: None,
-            token_program2022: None,
             amount0_requested,
             amount1_requested,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to PDA derived from 'authority']`
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_address::Address) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    /// The SPL program to perform token transfers
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_address::Address) -> &mut Self {
-        self.token_program = Some(token_program);
-        self
-    }
-    /// `[optional account, default to 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb']`
-    /// The SPL program 2022 to perform token transfers
-    #[inline(always)]
-    pub fn token_program2022(&mut self, token_program2022: solana_address::Address) -> &mut Self {
-        self.token_program2022 = Some(token_program2022);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -251,7 +225,7 @@ impl CollectFundFeeBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let owner = self.owner;
-        let authority = self.authority.unwrap_or(crate::pdas::AUTHORITY_ADDRESS);
+        let authority = crate::pdas::AUTHORITY_ADDRESS;
         let pool_state = self.pool_state;
         let amm_config = self.amm_config;
         let token0_vault = self.token0_vault;
@@ -260,12 +234,9 @@ impl CollectFundFeeBuilder {
         let vault1_mint = self.vault1_mint;
         let recipient_token0_account = self.recipient_token0_account;
         let recipient_token1_account = self.recipient_token1_account;
-        let token_program = self.token_program.unwrap_or(solana_address::address!(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        ));
-        let token_program2022 = self.token_program2022.unwrap_or(solana_address::address!(
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        ));
+        let token_program = solana_address::address!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+        let token_program2022 =
+            solana_address::address!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
         let accounts = CollectFundFee {
             owner,
             authority,

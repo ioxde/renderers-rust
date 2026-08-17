@@ -136,7 +136,7 @@ impl InsertTransactionInstructionArgs {
 ///   3. `[signer]` governance_authority
 ///   4. `[writable]` proposal_transaction_account
 ///   5. `[signer]` payer
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   6. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   7. `[optional]` rent (default to `SysvarRent111111111111111111111111111111111`)
 #[derive(Clone, Debug)]
 pub struct InsertTransactionBuilder {
@@ -146,7 +146,6 @@ pub struct InsertTransactionBuilder {
     governance_authority: solana_address::Address,
     proposal_transaction_account: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     rent: Option<solana_address::Address>,
     option_index: u8,
     index: u16,
@@ -175,7 +174,6 @@ impl InsertTransactionBuilder {
             governance_authority,
             proposal_transaction_account,
             payer,
-            system_program: None,
             rent: None,
             option_index,
             index,
@@ -183,12 +181,6 @@ impl InsertTransactionBuilder {
             instructions,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account, default to 'SysvarRent111111111111111111111111111111111']`
     #[inline(always)]
@@ -219,9 +211,7 @@ impl InsertTransactionBuilder {
         let governance_authority = self.governance_authority;
         let proposal_transaction_account = self.proposal_transaction_account;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let rent = self.rent.unwrap_or(solana_address::address!(
             "SysvarRent111111111111111111111111111111111"
         ));

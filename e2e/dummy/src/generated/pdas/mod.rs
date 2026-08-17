@@ -5,8 +5,14 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+pub mod cross_program_derived;
+pub mod dependent_on_optional;
 pub mod derived_account;
 pub mod global_config;
+pub mod optional_derived_seed;
 
+pub use self::cross_program_derived::*;
+pub use self::dependent_on_optional::*;
 pub use self::derived_account::*;
 pub use self::global_config::*;
+pub use self::optional_derived_seed::*;

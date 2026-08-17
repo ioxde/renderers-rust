@@ -83,12 +83,11 @@ impl Default for UpdateProgramMetadataInstructionData {
 ///
 ///   0. `[writable]` program_metadata_account
 ///   1. `[signer]` payer
-///   2. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct UpdateProgramMetadataBuilder {
     program_metadata_account: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -100,15 +99,8 @@ impl UpdateProgramMetadataBuilder {
         Self {
             program_metadata_account,
             payer,
-            system_program: None,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -129,9 +121,7 @@ impl UpdateProgramMetadataBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let program_metadata_account = self.program_metadata_account;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = UpdateProgramMetadata {
             program_metadata_account,
             payer,

@@ -180,7 +180,7 @@ impl CastVoteInstructionArgs {
 ///   6. `[writable]` proposal_vote_record
 ///   7. `[]` governing_token_mint
 ///   8. `[signer]` payer
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   9. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   10. `[]` realm_config_account
 ///   11. `[optional]` voter_weight_record
 ///   12. `[optional]` max_voter_weight_record
@@ -195,7 +195,6 @@ pub struct CastVoteBuilder {
     proposal_vote_record: solana_address::Address,
     governing_token_mint: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     realm_config_account: solana_address::Address,
     voter_weight_record: Option<solana_address::Address>,
     max_voter_weight_record: Option<solana_address::Address>,
@@ -227,19 +226,12 @@ impl CastVoteBuilder {
             proposal_vote_record,
             governing_token_mint,
             payer,
-            system_program: None,
             realm_config_account,
             voter_weight_record: None,
             max_voter_weight_record: None,
             vote,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account]`
     /// Optional Voter Weight Record
@@ -287,9 +279,7 @@ impl CastVoteBuilder {
         let proposal_vote_record = self.proposal_vote_record;
         let governing_token_mint = self.governing_token_mint;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let realm_config_account = self.realm_config_account;
         let voter_weight_record = self.voter_weight_record;
         let max_voter_weight_record = self.max_voter_weight_record;

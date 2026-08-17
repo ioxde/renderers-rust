@@ -112,14 +112,13 @@ impl CreateVestingAccountInstructionArgs {
 ///   1. `[writable]` beneficiary
 ///   2. `[writable]` pool_state
 ///   3. `[writable, optional]` vesting_record (default to PDA derived from 'vestingRecord')
-///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct CreateVestingAccountBuilder {
     creator: solana_address::Address,
     beneficiary: solana_address::Address,
     pool_state: solana_address::Address,
     vesting_record: Option<solana_address::Address>,
-    system_program: Option<solana_address::Address>,
     share_amount: u64,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
@@ -136,7 +135,6 @@ impl CreateVestingAccountBuilder {
             beneficiary,
             pool_state,
             vesting_record: None,
-            system_program: None,
             share_amount,
             __remaining_accounts: Vec::new(),
         }
@@ -146,13 +144,6 @@ impl CreateVestingAccountBuilder {
     #[inline(always)]
     pub fn vesting_record(&mut self, vesting_record: solana_address::Address) -> &mut Self {
         self.vesting_record = Some(vesting_record);
-        self
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    /// Required for account creation
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
     /// Add an additional account to the instruction.
@@ -178,9 +169,7 @@ impl CreateVestingAccountBuilder {
         let vesting_record = self.vesting_record.unwrap_or_else(|| {
             crate::pdas::find_vesting_record_pda(&self.pool_state, &self.beneficiary).0
         });
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = CreateVestingAccount {
             creator,
             beneficiary,

@@ -146,7 +146,7 @@ impl CreateGovernanceInstructionArgs {
 ///   2. `[]` governed_account
 ///   3. `[]` governing_token_owner_record
 ///   4. `[signer]` payer
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   5. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   6. `[signer]` governance_authority
 ///   7. `[]` realm_config_account
 ///   8. `[optional]` voter_weight_record
@@ -157,7 +157,6 @@ pub struct CreateGovernanceBuilder {
     governed_account: solana_address::Address,
     governing_token_owner_record: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     governance_authority: solana_address::Address,
     realm_config_account: solana_address::Address,
     voter_weight_record: Option<solana_address::Address>,
@@ -182,19 +181,12 @@ impl CreateGovernanceBuilder {
             governed_account,
             governing_token_owner_record,
             payer,
-            system_program: None,
             governance_authority,
             realm_config_account,
             voter_weight_record: None,
             config,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account]`
     /// Optional Voter Weight Record
@@ -228,9 +220,7 @@ impl CreateGovernanceBuilder {
         let governed_account = self.governed_account;
         let governing_token_owner_record = self.governing_token_owner_record;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let governance_authority = self.governance_authority;
         let realm_config_account = self.realm_config_account;
         let voter_weight_record = self.voter_weight_record;

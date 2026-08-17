@@ -174,7 +174,7 @@ impl CreateProposalInstructionArgs {
 ///   4. `[]` governing_token_mint
 ///   5. `[signer]` governance_authority
 ///   6. `[signer]` payer
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` system_program (fixed to '11111111111111111111111111111111')
 ///   8. `[]` realm_config
 ///   9. `[writable, optional]` voter_weight_record
 ///   10. `[optional]` proposal_deposit_account
@@ -187,7 +187,6 @@ pub struct CreateProposalBuilder {
     governing_token_mint: solana_address::Address,
     governance_authority: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     realm_config: solana_address::Address,
     voter_weight_record: Option<solana_address::Address>,
     proposal_deposit_account: Option<solana_address::Address>,
@@ -225,7 +224,6 @@ impl CreateProposalBuilder {
             governing_token_mint,
             governance_authority,
             payer,
-            system_program: None,
             realm_config,
             voter_weight_record: None,
             proposal_deposit_account: None,
@@ -237,12 +235,6 @@ impl CreateProposalBuilder {
             proposal_seed,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// `[optional account]`
     /// Optional Voter Weight Record
@@ -290,9 +282,7 @@ impl CreateProposalBuilder {
         let governing_token_mint = self.governing_token_mint;
         let governance_authority = self.governance_authority;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let realm_config = self.realm_config;
         let voter_weight_record = self.voter_weight_record;
         let proposal_deposit_account = self.proposal_deposit_account;

@@ -108,13 +108,12 @@ impl AddRequiredSignatoryInstructionArgs {
 ///   0. `[writable, signer]` governance_account
 ///   1. `[writable]` required_signatory_account
 ///   2. `[signer]` payer
-///   3. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[]` system_program (fixed to '11111111111111111111111111111111')
 #[derive(Clone, Debug)]
 pub struct AddRequiredSignatoryBuilder {
     governance_account: solana_address::Address,
     required_signatory_account: solana_address::Address,
     payer: solana_address::Address,
-    system_program: Option<solana_address::Address>,
     signatory: Address,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
@@ -130,16 +129,9 @@ impl AddRequiredSignatoryBuilder {
             governance_account,
             required_signatory_account,
             payer,
-            system_program: None,
             signatory,
             __remaining_accounts: Vec::new(),
         }
-    }
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_address::Address) -> &mut Self {
-        self.system_program = Some(system_program);
-        self
     }
     /// Add an additional account to the instruction.
     #[inline(always)]
@@ -161,9 +153,7 @@ impl AddRequiredSignatoryBuilder {
         let governance_account = self.governance_account;
         let required_signatory_account = self.required_signatory_account;
         let payer = self.payer;
-        let system_program = self
-            .system_program
-            .unwrap_or(solana_address::address!("11111111111111111111111111111111"));
+        let system_program = solana_address::address!("11111111111111111111111111111111");
         let accounts = AddRequiredSignatory {
             governance_account,
             required_signatory_account,

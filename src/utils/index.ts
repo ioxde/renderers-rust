@@ -2,6 +2,7 @@ export * from './cargoToml';
 export * from './codecs';
 export * from './computePda';
 export * from './discriminatorConstant';
+export * from './fixedInstructionAccounts';
 export * from './fragment';
 export * from './linkOverrides';
 export * from './render';

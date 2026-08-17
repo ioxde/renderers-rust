@@ -24,7 +24,7 @@ import {
 import { getBase16Encoder, getBase58Encoder, getBase64Encoder, getUtf8Encoder } from '@solana/codecs-strings';
 import { describe, expect, test } from 'vitest';
 
-import { computePdaAddress, computePdaDerivation, findProgramAddress } from '../../src/utils/computePda';
+import { computePdaAddress, computePdaDerivation, findProgramAddress, isOnCurve } from '../../src/utils/computePda';
 
 const AMM_PROGRAM = '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8';
 const LAN_PROGRAM = 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj';
@@ -755,5 +755,33 @@ describe('endianness convention', () => {
         expect(little).not.toBeNull();
         expect(big).not.toBeNull();
         expect(little).not.toBe(big);
+    });
+});
+
+describe('curve check', () => {
+    function bytes(hex: string): Uint8Array {
+        return getBase16Encoder().encode(hex) as Uint8Array;
+    }
+
+    test('it treats a non-canonically encoded y coordinate as on-curve', () => {
+        // Given the curve point (1, 0) written with y = p instead of the canonical y = 0.
+        // RFC 8032 forbids y >= p; dalek reduces it to 0 and decompresses to a real point.
+        const yEqualsP = bytes('edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f');
+
+        expect(isOnCurve(yEqualsP)).toBe(true);
+    });
+
+    test('it treats x = 0 with the sign bit set as on-curve', () => {
+        // Given the identity point (0, 1) encoded with the x-sign bit set. RFC 8032 rejects
+        // this pairing outright; dalek negates a zero x and decompresses it happily.
+        const identityWithSignBit = bytes('0100000000000000000000000000000000000000000000000000000000000080');
+
+        expect(isOnCurve(identityWithSignBit)).toBe(true);
+    });
+
+    test('it still reports canonical points and non-points correctly', () => {
+        // Loosening the encoding rules must not make the check answer true for everything.
+        expect(isOnCurve(base58(TOKEN_PROGRAM))).toBe(true);
+        expect(isOnCurve(base58('5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1'))).toBe(false);
     });
 });
