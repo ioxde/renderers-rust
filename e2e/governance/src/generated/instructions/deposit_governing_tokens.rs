@@ -18,17 +18,13 @@ pub struct DepositGoverningTokens {
     pub governing_token_holding_account: solana_address::Address,
     /// It can either be spl-token TokenAccount or MintAccount. Tokens will be transferred or minted to the holding account
     pub governing_token_source_account: solana_address::Address,
-
     pub governing_token_owner_account: solana_address::Address,
     /// It should be owner for TokenAccount and mint_authority for MintAccount
     pub governing_token_source_account_authority: solana_address::Address,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
-
     pub token_program: solana_address::Address,
     /// seeds=['realm-config', realm]
     pub realm_config_account: solana_address::Address,
@@ -251,17 +247,13 @@ pub struct DepositGoverningTokensCpiAccounts<'a, 'b> {
     pub governing_token_holding_account: &'b solana_account_info::AccountInfo<'a>,
     /// It can either be spl-token TokenAccount or MintAccount. Tokens will be transferred or minted to the holding account
     pub governing_token_source_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_owner_account: &'b solana_account_info::AccountInfo<'a>,
     /// It should be owner for TokenAccount and mint_authority for MintAccount
     pub governing_token_source_account_authority: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,
@@ -271,23 +263,18 @@ pub struct DepositGoverningTokensCpiAccounts<'a, 'b> {
 pub struct DepositGoverningTokensCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint]
     pub governing_token_holding_account: &'b solana_account_info::AccountInfo<'a>,
     /// It can either be spl-token TokenAccount or MintAccount. Tokens will be transferred or minted to the holding account
     pub governing_token_source_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_owner_account: &'b solana_account_info::AccountInfo<'a>,
     /// It should be owner for TokenAccount and mint_authority for MintAccount
     pub governing_token_source_account_authority: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,

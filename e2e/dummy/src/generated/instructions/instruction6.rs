@@ -107,7 +107,6 @@ pub struct Instruction6CpiAccounts<'a, 'b> {
 pub struct Instruction6Cpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub my_account: &'b solana_account_info::AccountInfo<'a>,
 }
 

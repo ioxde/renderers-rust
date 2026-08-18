@@ -15,9 +15,7 @@ pub const CAST_VOTE_DISCRIMINATOR: u8 = 13;
 #[derive(Debug)]
 pub struct CastVote {
     pub realm_account: solana_address::Address,
-
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// TokenOwnerRecord of the Proposal owner
     pub proposal_token_owner_record: solana_address::Address,
@@ -33,9 +31,7 @@ pub struct CastVote {
     ///     Council mint to veto Community proposals and Community mint to veto Council proposals
     ///     Note: In the current version only Council veto is supported
     pub governing_token_mint: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config_account: solana_address::Address,
@@ -309,9 +305,7 @@ impl CastVoteBuilder {
 /// `cast_vote` CPI accounts.
 pub struct CastVoteCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord of the Proposal owner
     pub proposal_token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -327,9 +321,7 @@ pub struct CastVoteCpiAccounts<'a, 'b> {
     ///     Council mint to veto Community proposals and Community mint to veto Council proposals
     ///     Note: In the current version only Council veto is supported
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,
@@ -343,11 +335,8 @@ pub struct CastVoteCpiAccounts<'a, 'b> {
 pub struct CastVoteCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord of the Proposal owner
     pub proposal_token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -363,9 +352,7 @@ pub struct CastVoteCpi<'a, 'b> {
     ///     Council mint to veto Community proposals and Community mint to veto Council proposals
     ///     Note: In the current version only Council veto is supported
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,

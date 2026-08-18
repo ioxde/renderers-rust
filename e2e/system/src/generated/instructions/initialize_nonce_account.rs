@@ -15,9 +15,7 @@ pub const INITIALIZE_NONCE_ACCOUNT_DISCRIMINATOR: u32 = 6;
 #[derive(Debug)]
 pub struct InitializeNonceAccount {
     pub nonce_account: solana_address::Address,
-
     pub recent_blockhashes_sysvar: solana_address::Address,
-
     pub rent_sysvar: solana_address::Address,
 }
 
@@ -178,9 +176,7 @@ impl InitializeNonceAccountBuilder {
 /// `initialize_nonce_account` CPI accounts.
 pub struct InitializeNonceAccountCpiAccounts<'a, 'b> {
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent_sysvar: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -188,11 +184,8 @@ pub struct InitializeNonceAccountCpiAccounts<'a, 'b> {
 pub struct InitializeNonceAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent_sysvar: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: InitializeNonceAccountInstructionArgs,

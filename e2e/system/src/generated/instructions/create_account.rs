@@ -15,7 +15,6 @@ pub const CREATE_ACCOUNT_DISCRIMINATOR: u32 = 0;
 #[derive(Debug)]
 pub struct CreateAccount {
     pub payer: solana_address::Address,
-
     pub new_account: solana_address::Address,
 }
 
@@ -149,7 +148,6 @@ impl CreateAccountBuilder {
 /// `create_account` CPI accounts.
 pub struct CreateAccountCpiAccounts<'a, 'b> {
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -157,9 +155,7 @@ pub struct CreateAccountCpiAccounts<'a, 'b> {
 pub struct CreateAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CreateAccountInstructionArgs,

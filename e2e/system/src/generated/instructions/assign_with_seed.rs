@@ -15,7 +15,6 @@ pub const ASSIGN_WITH_SEED_DISCRIMINATOR: u32 = 10;
 #[derive(Debug)]
 pub struct AssignWithSeed {
     pub account: solana_address::Address,
-
     pub base_account: solana_address::Address,
 }
 
@@ -155,7 +154,6 @@ impl AssignWithSeedBuilder {
 /// `assign_with_seed` CPI accounts.
 pub struct AssignWithSeedCpiAccounts<'a, 'b> {
     pub account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -163,9 +161,7 @@ pub struct AssignWithSeedCpiAccounts<'a, 'b> {
 pub struct AssignWithSeedCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AssignWithSeedInstructionArgs,

@@ -130,7 +130,6 @@ pub struct AllocateCpiAccounts<'a, 'b> {
 pub struct AllocateCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AllocateInstructionArgs,

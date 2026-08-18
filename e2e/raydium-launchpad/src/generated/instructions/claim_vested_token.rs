@@ -26,7 +26,6 @@ pub struct ClaimVestedToken {
     /// The pool's vault for base tokens
     /// Will be debited to send tokens to the user
     pub base_vault: solana_address::Address,
-
     pub user_base_token: solana_address::Address,
     /// The mint for the base token (token being sold)
     /// Created in this instruction with specified decimals
@@ -229,7 +228,6 @@ pub struct ClaimVestedTokenCpiAccounts<'a, 'b> {
     /// The pool's vault for base tokens
     /// Will be debited to send tokens to the user
     pub base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub user_base_token: &'b solana_account_info::AccountInfo<'a>,
     /// The mint for the base token (token being sold)
     /// Created in this instruction with specified decimals
@@ -260,7 +258,6 @@ pub struct ClaimVestedTokenCpi<'a, 'b> {
     /// The pool's vault for base tokens
     /// Will be debited to send tokens to the user
     pub base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub user_base_token: &'b solana_account_info::AccountInfo<'a>,
     /// The mint for the base token (token being sold)
     /// Created in this instruction with specified decimals

@@ -22,9 +22,7 @@ pub struct AddSignatory {
     pub governance_authority: solana_address::Address,
     /// Signatory Record Account
     pub signatory_record_account: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -200,9 +198,7 @@ pub struct AddSignatoryCpiAccounts<'a, 'b> {
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Signatory Record Account
     pub signatory_record_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -218,9 +214,7 @@ pub struct AddSignatoryCpi<'a, 'b> {
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Signatory Record Account
     pub signatory_record_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AddSignatoryInstructionArgs,

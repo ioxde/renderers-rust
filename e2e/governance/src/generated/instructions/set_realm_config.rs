@@ -15,7 +15,6 @@ pub const SET_REALM_CONFIG_DISCRIMINATOR: u8 = 22;
 #[derive(Debug)]
 pub struct SetRealmConfig {
     pub realm_account: solana_address::Address,
-
     pub realm_authority: solana_address::Address,
     /// Council Token Mint - optional.
     ///         Note: In the current version it's only possible to remove council mint (set it to None)
@@ -24,7 +23,6 @@ pub struct SetRealmConfig {
     pub council_token_mint: Option<solana_address::Address>,
     /// Optional unless council is used. seeds=['governance', realm, council_mint]
     pub council_token_holding_account: Option<solana_address::Address>,
-
     pub system_program: solana_address::Address,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: solana_address::Address,
@@ -376,7 +374,6 @@ impl SetRealmConfigBuilder {
 /// `set_realm_config` CPI accounts.
 pub struct SetRealmConfigCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Council Token Mint - optional.
     ///         Note: In the current version it's only possible to remove council mint (set it to None)
@@ -385,7 +382,6 @@ pub struct SetRealmConfigCpiAccounts<'a, 'b> {
     pub council_token_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Optional unless council is used. seeds=['governance', realm, council_mint]
     pub council_token_holding_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,
@@ -406,9 +402,7 @@ pub struct SetRealmConfigCpiAccounts<'a, 'b> {
 pub struct SetRealmConfigCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Council Token Mint - optional.
     ///         Note: In the current version it's only possible to remove council mint (set it to None)
@@ -417,7 +411,6 @@ pub struct SetRealmConfigCpi<'a, 'b> {
     pub council_token_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Optional unless council is used. seeds=['governance', realm, council_mint]
     pub council_token_holding_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,

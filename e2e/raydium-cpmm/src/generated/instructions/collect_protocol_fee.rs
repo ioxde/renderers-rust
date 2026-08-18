@@ -15,7 +15,6 @@ pub const COLLECT_PROTOCOL_FEE_DISCRIMINATOR: [u8; 8] = [136, 136, 252, 221, 194
 pub struct CollectProtocolFee {
     /// Only admin or owner can collect fee now
     pub owner: solana_address::Address,
-
     pub authority: solana_address::Address,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: solana_address::Address,
@@ -266,7 +265,6 @@ impl CollectProtocolFeeBuilder {
 pub struct CollectProtocolFeeCpiAccounts<'a, 'b> {
     /// Only admin or owner can collect fee now
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
@@ -296,7 +294,6 @@ pub struct CollectProtocolFeeCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// Only admin or owner can collect fee now
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,

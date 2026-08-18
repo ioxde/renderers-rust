@@ -27,9 +27,7 @@ pub struct CreateProposal {
     pub governing_token_mint: solana_address::Address,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: solana_address::Address,
@@ -326,9 +324,7 @@ pub struct CreateProposalCpiAccounts<'a, 'b> {
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,
@@ -356,9 +352,7 @@ pub struct CreateProposalCpi<'a, 'b> {
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,

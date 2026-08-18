@@ -17,15 +17,10 @@ pub const UPDATE_GUARD_DISCRIMINATOR: [u8; 8] = [51, 38, 175, 180, 25, 249, 39, 
 #[derive(Debug)]
 pub struct UpdateGuard {
     pub guard: solana_address::Address,
-
     pub mint: solana_address::Address,
-
     pub token_account: solana_address::Address,
-
     pub guard_authority: solana_address::Address,
-
     pub token_program: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -232,15 +227,10 @@ impl UpdateGuardBuilder {
 /// `update_guard` CPI accounts.
 pub struct UpdateGuardCpiAccounts<'a, 'b> {
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -248,17 +238,11 @@ pub struct UpdateGuardCpiAccounts<'a, 'b> {
 pub struct UpdateGuardCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: UpdateGuardInstructionArgs,

@@ -14,7 +14,6 @@ pub const REMOVE_REQUIRED_SIGNATORY_DISCRIMINATOR: u8 = 30;
 #[derive(Debug)]
 pub struct RemoveRequiredSignatory {
     pub governance_account: solana_address::Address,
-
     pub required_signatory_account: solana_address::Address,
     /// Beneficiary Account which would receive lamports from the disposed RequiredSignatory Account
     pub beneficiary_account: solana_address::Address,
@@ -138,7 +137,6 @@ impl RemoveRequiredSignatoryBuilder {
 /// `remove_required_signatory` CPI accounts.
 pub struct RemoveRequiredSignatoryCpiAccounts<'a, 'b> {
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub required_signatory_account: &'b solana_account_info::AccountInfo<'a>,
     /// Beneficiary Account which would receive lamports from the disposed RequiredSignatory Account
     pub beneficiary_account: &'b solana_account_info::AccountInfo<'a>,
@@ -148,9 +146,7 @@ pub struct RemoveRequiredSignatoryCpiAccounts<'a, 'b> {
 pub struct RemoveRequiredSignatoryCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub required_signatory_account: &'b solana_account_info::AccountInfo<'a>,
     /// Beneficiary Account which would receive lamports from the disposed RequiredSignatory Account
     pub beneficiary_account: &'b solana_account_info::AccountInfo<'a>,

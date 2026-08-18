@@ -41,9 +41,7 @@ pub struct Initialize {
     pub creator_token1: solana_address::Address,
     /// creator lp token account
     pub creator_lp_token: solana_address::Address,
-
     pub token0_vault: solana_address::Address,
-
     pub token1_vault: solana_address::Address,
     /// create pool fee account
     pub create_pool_fee: solana_address::Address,
@@ -432,9 +430,7 @@ pub struct InitializeCpiAccounts<'a, 'b> {
     pub creator_token1: &'b solana_account_info::AccountInfo<'a>,
     /// creator lp token account
     pub creator_lp_token: &'b solana_account_info::AccountInfo<'a>,
-
     pub token0_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub token1_vault: &'b solana_account_info::AccountInfo<'a>,
     /// create pool fee account
     pub create_pool_fee: &'b solana_account_info::AccountInfo<'a>,
@@ -486,9 +482,7 @@ pub struct InitializeCpi<'a, 'b> {
     pub creator_token1: &'b solana_account_info::AccountInfo<'a>,
     /// creator lp token account
     pub creator_lp_token: &'b solana_account_info::AccountInfo<'a>,
-
     pub token0_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub token1_vault: &'b solana_account_info::AccountInfo<'a>,
     /// create pool fee account
     pub create_pool_fee: &'b solana_account_info::AccountInfo<'a>,

@@ -14,9 +14,7 @@ pub const ADVANCE_NONCE_ACCOUNT_DISCRIMINATOR: u32 = 4;
 #[derive(Debug)]
 pub struct AdvanceNonceAccount {
     pub nonce_account: solana_address::Address,
-
     pub recent_blockhashes_sysvar: solana_address::Address,
-
     pub nonce_authority: solana_address::Address,
 }
 
@@ -150,9 +148,7 @@ impl AdvanceNonceAccountBuilder {
 /// `advance_nonce_account` CPI accounts.
 pub struct AdvanceNonceAccountCpiAccounts<'a, 'b> {
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -160,11 +156,8 @@ pub struct AdvanceNonceAccountCpiAccounts<'a, 'b> {
 pub struct AdvanceNonceAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
 }
 

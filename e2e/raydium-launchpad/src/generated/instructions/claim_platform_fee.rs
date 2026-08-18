@@ -23,7 +23,6 @@ pub struct ClaimPlatformFee {
     pub pool_state: solana_address::Address,
     /// The platform config account
     pub platform_config: solana_address::Address,
-
     pub quote_vault: solana_address::Address,
     /// The address that receives the collected quote token fees
     pub recipient_token_account: solana_address::Address,
@@ -243,7 +242,6 @@ pub struct ClaimPlatformFeeCpiAccounts<'a, 'b> {
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
     /// The platform config account
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
     /// The address that receives the collected quote token fees
     pub recipient_token_account: &'b solana_account_info::AccountInfo<'a>,
@@ -271,7 +269,6 @@ pub struct ClaimPlatformFeeCpi<'a, 'b> {
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
     /// The platform config account
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
     /// The address that receives the collected quote token fees
     pub recipient_token_account: &'b solana_account_info::AccountInfo<'a>,

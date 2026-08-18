@@ -16,7 +16,6 @@ pub const SET_GOVERNANCE_DELEGATE_DISCRIMINATOR: u8 = 3;
 pub struct SetGovernanceDelegate {
     /// Current governance delegate or governing token owner
     pub current_delegate_or_owner: solana_address::Address,
-
     pub token_owner_record: solana_address::Address,
 }
 
@@ -157,7 +156,6 @@ impl SetGovernanceDelegateBuilder {
 pub struct SetGovernanceDelegateCpiAccounts<'a, 'b> {
     /// Current governance delegate or governing token owner
     pub current_delegate_or_owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -167,7 +165,6 @@ pub struct SetGovernanceDelegateCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// Current governance delegate or governing token owner
     pub current_delegate_or_owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SetGovernanceDelegateInstructionArgs,

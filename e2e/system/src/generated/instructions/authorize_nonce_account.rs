@@ -15,7 +15,6 @@ pub const AUTHORIZE_NONCE_ACCOUNT_DISCRIMINATOR: u32 = 7;
 #[derive(Debug)]
 pub struct AuthorizeNonceAccount {
     pub nonce_account: solana_address::Address,
-
     pub nonce_authority: solana_address::Address,
 }
 
@@ -150,7 +149,6 @@ impl AuthorizeNonceAccountBuilder {
 /// `authorize_nonce_account` CPI accounts.
 pub struct AuthorizeNonceAccountCpiAccounts<'a, 'b> {
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -158,9 +156,7 @@ pub struct AuthorizeNonceAccountCpiAccounts<'a, 'b> {
 pub struct AuthorizeNonceAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AuthorizeNonceAccountInstructionArgs,

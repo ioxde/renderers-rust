@@ -15,9 +15,7 @@ pub const TRANSFER_SOL_WITH_SEED_DISCRIMINATOR: u32 = 11;
 #[derive(Debug)]
 pub struct TransferSolWithSeed {
     pub source: solana_address::Address,
-
     pub base_account: solana_address::Address,
-
     pub destination: solana_address::Address,
 }
 
@@ -169,9 +167,7 @@ impl TransferSolWithSeedBuilder {
 /// `transfer_sol_with_seed` CPI accounts.
 pub struct TransferSolWithSeedCpiAccounts<'a, 'b> {
     pub source: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -179,11 +175,8 @@ pub struct TransferSolWithSeedCpiAccounts<'a, 'b> {
 pub struct TransferSolWithSeedCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub source: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: TransferSolWithSeedInstructionArgs,

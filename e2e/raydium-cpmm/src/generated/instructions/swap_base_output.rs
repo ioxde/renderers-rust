@@ -15,7 +15,6 @@ pub const SWAP_BASE_OUTPUT_DISCRIMINATOR: [u8; 8] = [55, 217, 98, 86, 163, 74, 1
 pub struct SwapBaseOutput {
     /// The user performing the swap
     pub payer: solana_address::Address,
-
     pub authority: solana_address::Address,
     /// The factory state to read protocol fees
     pub amm_config: solana_address::Address,
@@ -281,7 +280,6 @@ impl SwapBaseOutputBuilder {
 pub struct SwapBaseOutputCpiAccounts<'a, 'b> {
     /// The user performing the swap
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// The factory state to read protocol fees
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,
@@ -313,7 +311,6 @@ pub struct SwapBaseOutputCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// The user performing the swap
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// The factory state to read protocol fees
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,

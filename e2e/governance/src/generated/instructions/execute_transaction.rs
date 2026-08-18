@@ -14,9 +14,7 @@ pub const EXECUTE_TRANSACTION_DISCRIMINATOR: u8 = 16;
 #[derive(Debug)]
 pub struct ExecuteTransaction {
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
-
     pub proposal_transaction_account: solana_address::Address,
 }
 
@@ -138,9 +136,7 @@ impl ExecuteTransactionBuilder {
 /// `execute_transaction` CPI accounts.
 pub struct ExecuteTransactionCpiAccounts<'a, 'b> {
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -148,11 +144,8 @@ pub struct ExecuteTransactionCpiAccounts<'a, 'b> {
 pub struct ExecuteTransactionCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
 }
 

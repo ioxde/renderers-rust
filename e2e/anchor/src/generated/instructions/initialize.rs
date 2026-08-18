@@ -15,15 +15,10 @@ pub const INITIALIZE_DISCRIMINATOR: [u8; 8] = [43, 34, 13, 49, 167, 88, 235, 235
 #[derive(Debug)]
 pub struct Initialize {
     pub extra_metas_account: solana_address::Address,
-
     pub guard: solana_address::Address,
-
     pub mint: solana_address::Address,
-
     pub transfer_hook_authority: solana_address::Address,
-
     pub system_program: solana_address::Address,
-
     pub payer: solana_address::Address,
 }
 
@@ -187,15 +182,10 @@ impl InitializeBuilder {
 /// `initialize` CPI accounts.
 pub struct InitializeCpiAccounts<'a, 'b> {
     pub extra_metas_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub transfer_hook_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -203,17 +193,11 @@ pub struct InitializeCpiAccounts<'a, 'b> {
 pub struct InitializeCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub extra_metas_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub transfer_hook_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
 }
 

@@ -49,9 +49,7 @@ pub struct SellExactIn {
     pub base_token_program: solana_address::Address,
     /// SPL Token program for quote token transfers
     pub quote_token_program: solana_address::Address,
-
     pub event_authority: solana_address::Address,
-
     pub program: solana_address::Address,
 }
 
@@ -343,9 +341,7 @@ pub struct SellExactInCpiAccounts<'a, 'b> {
     pub base_token_program: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for quote token transfers
     pub quote_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub event_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -389,9 +385,7 @@ pub struct SellExactInCpi<'a, 'b> {
     pub base_token_program: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for quote token transfers
     pub quote_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub event_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: SellExactInInstructionArgs,

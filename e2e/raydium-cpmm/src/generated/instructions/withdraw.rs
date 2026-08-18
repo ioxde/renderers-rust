@@ -15,7 +15,6 @@ pub const WITHDRAW_DISCRIMINATOR: [u8; 8] = [183, 18, 70, 156, 148, 109, 161, 34
 pub struct Withdraw {
     /// Pays to mint the position
     pub owner: solana_address::Address,
-
     pub authority: solana_address::Address,
     /// Pool state account
     pub pool_state: solana_address::Address,
@@ -284,7 +283,6 @@ impl WithdrawBuilder {
 pub struct WithdrawCpiAccounts<'a, 'b> {
     /// Pays to mint the position
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state account
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
@@ -318,7 +316,6 @@ pub struct WithdrawCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// Pays to mint the position
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state account
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,

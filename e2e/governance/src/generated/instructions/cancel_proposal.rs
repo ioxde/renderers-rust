@@ -14,9 +14,7 @@ pub const CANCEL_PROPOSAL_DISCRIMINATOR: u8 = 11;
 #[derive(Debug)]
 pub struct CancelProposal {
     pub realm_account: solana_address::Address,
-
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: solana_address::Address,
@@ -160,9 +158,7 @@ impl CancelProposalBuilder {
 /// `cancel_proposal` CPI accounts.
 pub struct CancelProposalCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -174,11 +170,8 @@ pub struct CancelProposalCpiAccounts<'a, 'b> {
 pub struct CancelProposalCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,

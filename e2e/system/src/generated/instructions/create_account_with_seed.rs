@@ -15,9 +15,7 @@ pub const CREATE_ACCOUNT_WITH_SEED_DISCRIMINATOR: u32 = 3;
 #[derive(Debug)]
 pub struct CreateAccountWithSeed {
     pub payer: solana_address::Address,
-
     pub new_account: solana_address::Address,
-
     pub base_account: solana_address::Address,
 }
 
@@ -179,9 +177,7 @@ impl CreateAccountWithSeedBuilder {
 /// `create_account_with_seed` CPI accounts.
 pub struct CreateAccountWithSeedCpiAccounts<'a, 'b> {
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -189,11 +185,8 @@ pub struct CreateAccountWithSeedCpiAccounts<'a, 'b> {
 pub struct CreateAccountWithSeedCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CreateAccountWithSeedInstructionArgs,

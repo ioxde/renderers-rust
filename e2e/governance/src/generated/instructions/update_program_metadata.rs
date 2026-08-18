@@ -15,9 +15,7 @@ pub const UPDATE_PROGRAM_METADATA_DISCRIMINATOR: u8 = 24;
 pub struct UpdateProgramMetadata {
     /// seeds=['metadata']
     pub program_metadata_account: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -136,9 +134,7 @@ impl UpdateProgramMetadataBuilder {
 pub struct UpdateProgramMetadataCpiAccounts<'a, 'b> {
     /// seeds=['metadata']
     pub program_metadata_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -148,9 +144,7 @@ pub struct UpdateProgramMetadataCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['metadata']
     pub program_metadata_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 

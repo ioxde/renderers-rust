@@ -16,7 +16,6 @@ pub struct CreateVestingAccount {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub creator: solana_address::Address,
-
     pub beneficiary: solana_address::Address,
     /// The pool state account
     pub pool_state: solana_address::Address,
@@ -190,7 +189,6 @@ pub struct CreateVestingAccountCpiAccounts<'a, 'b> {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub creator: &'b solana_account_info::AccountInfo<'a>,
-
     pub beneficiary: &'b solana_account_info::AccountInfo<'a>,
     /// The pool state account
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
@@ -207,7 +205,6 @@ pub struct CreateVestingAccountCpi<'a, 'b> {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub creator: &'b solana_account_info::AccountInfo<'a>,
-
     pub beneficiary: &'b solana_account_info::AccountInfo<'a>,
     /// The pool state account
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,

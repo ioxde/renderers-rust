@@ -17,7 +17,6 @@ pub struct CreateAmmConfig {
     pub owner: solana_address::Address,
     /// Initialize config state account to store protocol owner address and fee rates.
     pub amm_config: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -192,7 +191,6 @@ pub struct CreateAmmConfigCpiAccounts<'a, 'b> {
     pub owner: &'b solana_account_info::AccountInfo<'a>,
     /// Initialize config state account to store protocol owner address and fee rates.
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -204,7 +202,6 @@ pub struct CreateAmmConfigCpi<'a, 'b> {
     pub owner: &'b solana_account_info::AccountInfo<'a>,
     /// Initialize config state account to store protocol owner address and fee rates.
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CreateAmmConfigInstructionArgs,

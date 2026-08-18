@@ -23,7 +23,6 @@ pub struct MigrateToCpswap {
     /// Platform configuration account containing platform-wide settings
     /// Used to read platform fee rate
     pub platform_config: solana_address::Address,
-
     pub cpswap_program: solana_address::Address,
     /// PDA account:
     /// seeds = [
@@ -36,25 +35,15 @@ pub struct MigrateToCpswap {
     ///
     /// Or random account: must be signed by cli
     pub cpswap_pool: solana_address::Address,
-
     pub cpswap_authority: solana_address::Address,
-
     pub cpswap_lp_mint: solana_address::Address,
-
     pub cpswap_base_vault: solana_address::Address,
-
     pub cpswap_quote_vault: solana_address::Address,
-
     pub cpswap_config: solana_address::Address,
-
     pub cpswap_create_pool_fee: solana_address::Address,
-
     pub cpswap_observation: solana_address::Address,
-
     pub lock_program: solana_address::Address,
-
     pub lock_authority: solana_address::Address,
-
     pub lock_lp_vault: solana_address::Address,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -70,7 +59,6 @@ pub struct MigrateToCpswap {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: solana_address::Address,
-
     pub pool_lp_token: solana_address::Address,
     /// SPL Token program for the base token
     /// Must be the standard Token program
@@ -480,7 +468,6 @@ pub struct MigrateToCpswapCpiAccounts<'a, 'b> {
     /// Platform configuration account containing platform-wide settings
     /// Used to read platform fee rate
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_program: &'b solana_account_info::AccountInfo<'a>,
     /// PDA account:
     /// seeds = [
@@ -493,25 +480,15 @@ pub struct MigrateToCpswapCpiAccounts<'a, 'b> {
     ///
     /// Or random account: must be signed by cli
     pub cpswap_pool: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_lp_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_create_pool_fee: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_observation: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_lp_vault: &'b solana_account_info::AccountInfo<'a>,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -527,7 +504,6 @@ pub struct MigrateToCpswapCpiAccounts<'a, 'b> {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_lp_token: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for the base token
     /// Must be the standard Token program
@@ -558,7 +534,6 @@ pub struct MigrateToCpswapCpi<'a, 'b> {
     /// Platform configuration account containing platform-wide settings
     /// Used to read platform fee rate
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_program: &'b solana_account_info::AccountInfo<'a>,
     /// PDA account:
     /// seeds = [
@@ -571,25 +546,15 @@ pub struct MigrateToCpswapCpi<'a, 'b> {
     ///
     /// Or random account: must be signed by cli
     pub cpswap_pool: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_lp_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_create_pool_fee: &'b solana_account_info::AccountInfo<'a>,
-
     pub cpswap_observation: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub lock_lp_vault: &'b solana_account_info::AccountInfo<'a>,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -605,7 +570,6 @@ pub struct MigrateToCpswapCpi<'a, 'b> {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_lp_token: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for the base token
     /// Must be the standard Token program

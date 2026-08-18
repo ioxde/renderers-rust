@@ -131,7 +131,6 @@ pub struct AssignCpiAccounts<'a, 'b> {
 pub struct AssignCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AssignInstructionArgs,

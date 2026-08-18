@@ -15,7 +15,6 @@ pub const COLLECT_MIGRATE_FEE_DISCRIMINATOR: [u8; 8] = [255, 186, 150, 223, 235,
 pub struct CollectMigrateFee {
     /// Only migrate_fee_owner saved in global_config can collect migrate fee now
     pub owner: solana_address::Address,
-
     pub authority: solana_address::Address,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: solana_address::Address,
@@ -192,7 +191,6 @@ impl CollectMigrateFeeBuilder {
 pub struct CollectMigrateFeeCpiAccounts<'a, 'b> {
     /// Only migrate_fee_owner saved in global_config can collect migrate fee now
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
@@ -214,7 +212,6 @@ pub struct CollectMigrateFeeCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// Only migrate_fee_owner saved in global_config can collect migrate fee now
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
     /// Pool state stores accumulated protocol fee amount
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,

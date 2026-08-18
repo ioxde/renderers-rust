@@ -20,7 +20,6 @@ pub struct MigrateToAmm {
     pub base_mint: solana_address::Address,
     /// The mint for the quote token (token used to buy)
     pub quote_mint: solana_address::Address,
-
     pub openbook_program: solana_address::Address,
     /// Account created and asigned to openbook_program but not been initialized
     pub market: solana_address::Address,
@@ -32,31 +31,20 @@ pub struct MigrateToAmm {
     pub bids: solana_address::Address,
     /// Account created and asigned to openbook_program but not been initialized
     pub asks: solana_address::Address,
-
     pub market_vault_signer: solana_address::Address,
     /// Token account that holds the market's base tokens
     pub market_base_vault: solana_address::Address,
     /// Token account that holds the market's quote tokens
     pub market_quote_vault: solana_address::Address,
-
     pub amm_program: solana_address::Address,
-
     pub amm_pool: solana_address::Address,
-
     pub amm_authority: solana_address::Address,
-
     pub amm_open_orders: solana_address::Address,
-
     pub amm_lp_mint: solana_address::Address,
-
     pub amm_base_vault: solana_address::Address,
-
     pub amm_quote_vault: solana_address::Address,
-
     pub amm_target_orders: solana_address::Address,
-
     pub amm_config: solana_address::Address,
-
     pub amm_create_fee_destination: solana_address::Address,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -72,7 +60,6 @@ pub struct MigrateToAmm {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: solana_address::Address,
-
     pub pool_lp_token: solana_address::Address,
     /// SPL Token program for the base token
     /// Must be the standard Token program
@@ -545,7 +532,6 @@ pub struct MigrateToAmmCpiAccounts<'a, 'b> {
     pub base_mint: &'b solana_account_info::AccountInfo<'a>,
     /// The mint for the quote token (token used to buy)
     pub quote_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub openbook_program: &'b solana_account_info::AccountInfo<'a>,
     /// Account created and asigned to openbook_program but not been initialized
     pub market: &'b solana_account_info::AccountInfo<'a>,
@@ -557,31 +543,20 @@ pub struct MigrateToAmmCpiAccounts<'a, 'b> {
     pub bids: &'b solana_account_info::AccountInfo<'a>,
     /// Account created and asigned to openbook_program but not been initialized
     pub asks: &'b solana_account_info::AccountInfo<'a>,
-
     pub market_vault_signer: &'b solana_account_info::AccountInfo<'a>,
     /// Token account that holds the market's base tokens
     pub market_base_vault: &'b solana_account_info::AccountInfo<'a>,
     /// Token account that holds the market's quote tokens
     pub market_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_pool: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_open_orders: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_lp_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_target_orders: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_create_fee_destination: &'b solana_account_info::AccountInfo<'a>,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -597,7 +572,6 @@ pub struct MigrateToAmmCpiAccounts<'a, 'b> {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_lp_token: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for the base token
     /// Must be the standard Token program
@@ -621,7 +595,6 @@ pub struct MigrateToAmmCpi<'a, 'b> {
     pub base_mint: &'b solana_account_info::AccountInfo<'a>,
     /// The mint for the quote token (token used to buy)
     pub quote_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub openbook_program: &'b solana_account_info::AccountInfo<'a>,
     /// Account created and asigned to openbook_program but not been initialized
     pub market: &'b solana_account_info::AccountInfo<'a>,
@@ -633,31 +606,20 @@ pub struct MigrateToAmmCpi<'a, 'b> {
     pub bids: &'b solana_account_info::AccountInfo<'a>,
     /// Account created and asigned to openbook_program but not been initialized
     pub asks: &'b solana_account_info::AccountInfo<'a>,
-
     pub market_vault_signer: &'b solana_account_info::AccountInfo<'a>,
     /// Token account that holds the market's base tokens
     pub market_base_vault: &'b solana_account_info::AccountInfo<'a>,
     /// Token account that holds the market's quote tokens
     pub market_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_pool: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_open_orders: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_lp_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_base_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_target_orders: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_config: &'b solana_account_info::AccountInfo<'a>,
-
     pub amm_create_fee_destination: &'b solana_account_info::AccountInfo<'a>,
     /// PDA that acts as the authority for pool vault operations
     /// Generated using AUTH_SEED
@@ -673,7 +635,6 @@ pub struct MigrateToAmmCpi<'a, 'b> {
     /// The pool's vault for quote tokens
     /// Will be fully drained during migration
     pub quote_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_lp_token: &'b solana_account_info::AccountInfo<'a>,
     /// SPL Token program for the base token
     /// Must be the standard Token program

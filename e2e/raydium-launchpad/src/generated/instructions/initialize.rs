@@ -19,7 +19,6 @@ pub struct Initialize {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub payer: solana_address::Address,
-
     pub creator: solana_address::Address,
     /// Global configuration account containing protocol-wide settings
     /// Includes settings like quote token mint and fee parameters
@@ -60,9 +59,7 @@ pub struct Initialize {
     pub system_program: solana_address::Address,
     /// Required for rent exempt calculations
     pub rent_program: solana_address::Address,
-
     pub event_authority: solana_address::Address,
-
     pub program: solana_address::Address,
 }
 
@@ -363,7 +360,6 @@ pub struct InitializeCpiAccounts<'a, 'b> {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub creator: &'b solana_account_info::AccountInfo<'a>,
     /// Global configuration account containing protocol-wide settings
     /// Includes settings like quote token mint and fee parameters
@@ -404,9 +400,7 @@ pub struct InitializeCpiAccounts<'a, 'b> {
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// Required for rent exempt calculations
     pub rent_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub event_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -417,7 +411,6 @@ pub struct InitializeCpi<'a, 'b> {
     /// The account paying for the initialization costs
     /// This can be any account with sufficient SOL to cover the transaction
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub creator: &'b solana_account_info::AccountInfo<'a>,
     /// Global configuration account containing protocol-wide settings
     /// Includes settings like quote token mint and fee parameters
@@ -458,9 +451,7 @@ pub struct InitializeCpi<'a, 'b> {
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// Required for rent exempt calculations
     pub rent_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub event_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: InitializeInstructionArgs,

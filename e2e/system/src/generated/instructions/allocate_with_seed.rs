@@ -15,7 +15,6 @@ pub const ALLOCATE_WITH_SEED_DISCRIMINATOR: u32 = 9;
 #[derive(Debug)]
 pub struct AllocateWithSeed {
     pub new_account: solana_address::Address,
-
     pub base_account: solana_address::Address,
 }
 
@@ -163,7 +162,6 @@ impl AllocateWithSeedBuilder {
 /// `allocate_with_seed` CPI accounts.
 pub struct AllocateWithSeedCpiAccounts<'a, 'b> {
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -171,9 +169,7 @@ pub struct AllocateWithSeedCpiAccounts<'a, 'b> {
 pub struct AllocateWithSeedCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub base_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AllocateWithSeedInstructionArgs,

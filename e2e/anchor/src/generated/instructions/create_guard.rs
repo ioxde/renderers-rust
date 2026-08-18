@@ -17,19 +17,12 @@ pub const CREATE_GUARD_DISCRIMINATOR: [u8; 8] = [251, 254, 17, 198, 219, 218, 15
 #[derive(Debug)]
 pub struct CreateGuard {
     pub guard: solana_address::Address,
-
     pub mint: solana_address::Address,
-
     pub mint_token_account: solana_address::Address,
-
     pub guard_authority: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub associated_token_program: solana_address::Address,
-
     pub token_program: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -264,19 +257,12 @@ impl CreateGuardBuilder {
 /// `create_guard` CPI accounts.
 pub struct CreateGuardCpiAccounts<'a, 'b> {
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint_token_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -284,21 +270,13 @@ pub struct CreateGuardCpiAccounts<'a, 'b> {
 pub struct CreateGuardCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint_token_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: CreateGuardInstructionArgs,

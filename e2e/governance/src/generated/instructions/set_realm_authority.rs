@@ -15,7 +15,6 @@ pub const SET_REALM_AUTHORITY_DISCRIMINATOR: u8 = 21;
 #[derive(Debug)]
 pub struct SetRealmAuthority {
     pub realm_account: solana_address::Address,
-
     pub realm_authority: solana_address::Address,
     /// Must be one of the realm governances when set
     pub new_realm_authority: Option<solana_address::Address>,
@@ -178,7 +177,6 @@ impl SetRealmAuthorityBuilder {
 /// `set_realm_authority` CPI accounts.
 pub struct SetRealmAuthorityCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Must be one of the realm governances when set
     pub new_realm_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -188,9 +186,7 @@ pub struct SetRealmAuthorityCpiAccounts<'a, 'b> {
 pub struct SetRealmAuthorityCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Must be one of the realm governances when set
     pub new_realm_authority: Option<&'b solana_account_info::AccountInfo<'a>>,

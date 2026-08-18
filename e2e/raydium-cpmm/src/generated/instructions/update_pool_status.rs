@@ -14,7 +14,6 @@ pub const UPDATE_POOL_STATUS_DISCRIMINATOR: [u8; 8] = [130, 87, 108, 6, 46, 224,
 #[derive(Debug)]
 pub struct UpdatePoolStatus {
     pub authority: solana_address::Address,
-
     pub pool_state: solana_address::Address,
 }
 
@@ -150,7 +149,6 @@ impl UpdatePoolStatusBuilder {
 /// `update_pool_status` CPI accounts.
 pub struct UpdatePoolStatusCpiAccounts<'a, 'b> {
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -158,9 +156,7 @@ pub struct UpdatePoolStatusCpiAccounts<'a, 'b> {
 pub struct UpdatePoolStatusCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: UpdatePoolStatusInstructionArgs,

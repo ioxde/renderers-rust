@@ -18,13 +18,11 @@ pub struct RevokeGoverningTokens {
     pub governing_token_holding_account: solana_address::Address,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: solana_address::Address,
-
     pub governing_token_mint: solana_address::Address,
     /// GoverningTokenMint mint_authority
     pub governing_token_mint_authority_or_token_owner: solana_address::Address,
     /// seeds=['realm-config', realm]
     pub realm_config_account: solana_address::Address,
-
     pub token_program: solana_address::Address,
 }
 
@@ -221,13 +219,11 @@ pub struct RevokeGoverningTokensCpiAccounts<'a, 'b> {
     pub governing_token_holding_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// GoverningTokenMint mint_authority
     pub governing_token_mint_authority_or_token_owner: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -235,19 +231,16 @@ pub struct RevokeGoverningTokensCpiAccounts<'a, 'b> {
 pub struct RevokeGoverningTokensCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint]
     pub governing_token_holding_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// GoverningTokenMint mint_authority
     pub governing_token_mint_authority_or_token_owner: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['realm-config', realm]
     pub realm_config_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: RevokeGoverningTokensInstructionArgs,

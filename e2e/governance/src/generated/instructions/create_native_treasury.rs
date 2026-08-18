@@ -17,9 +17,7 @@ pub struct CreateNativeTreasury {
     pub governance_account: solana_address::Address,
     /// seeds=['native-treasury', governance]
     pub native_treasury_account: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -150,9 +148,7 @@ pub struct CreateNativeTreasuryCpiAccounts<'a, 'b> {
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['native-treasury', governance]
     pub native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -164,9 +160,7 @@ pub struct CreateNativeTreasuryCpi<'a, 'b> {
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['native-treasury', governance]
     pub native_treasury_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 

@@ -26,13 +26,10 @@ pub struct CreateProgramGovernance {
     pub current_upgrade_authority: solana_address::Address,
     /// Governing TokenOwnerRecord account (Used only if not signed by RealmAuthority)
     pub governing_token_owner_record: solana_address::Address,
-
     pub payer: solana_address::Address,
     /// bpf_upgradeable_loader_program program
     pub bpf_upgradeable_loader_program: solana_address::Address,
-
     pub system_program: solana_address::Address,
-
     pub governance_authority: solana_address::Address,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: solana_address::Address,
@@ -299,13 +296,10 @@ pub struct CreateProgramGovernanceCpiAccounts<'a, 'b> {
     pub current_upgrade_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Governing TokenOwnerRecord account (Used only if not signed by RealmAuthority)
     pub governing_token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
     /// bpf_upgradeable_loader_program program
     pub bpf_upgradeable_loader_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,
@@ -329,13 +323,10 @@ pub struct CreateProgramGovernanceCpi<'a, 'b> {
     pub current_upgrade_authority: &'b solana_account_info::AccountInfo<'a>,
     /// Governing TokenOwnerRecord account (Used only if not signed by RealmAuthority)
     pub governing_token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
     /// bpf_upgradeable_loader_program program
     pub bpf_upgradeable_loader_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. seeds=['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,

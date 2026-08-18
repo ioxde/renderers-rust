@@ -12,7 +12,6 @@ use borsh::BorshSerialize;
 #[derive(Debug)]
 pub struct Instruction10 {
     pub owner: solana_address::Address,
-
     pub self_program: solana_address::Address,
 }
 
@@ -114,7 +113,6 @@ impl Instruction10Builder {
 /// `instruction10` CPI accounts.
 pub struct Instruction10CpiAccounts<'a, 'b> {
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub self_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -122,9 +120,7 @@ pub struct Instruction10CpiAccounts<'a, 'b> {
 pub struct Instruction10Cpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub self_program: &'b solana_account_info::AccountInfo<'a>,
 }
 

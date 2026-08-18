@@ -15,7 +15,6 @@ pub const INSERT_TRANSACTION_DISCRIMINATOR: u8 = 9;
 #[derive(Debug)]
 pub struct InsertTransaction {
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: solana_address::Address,
@@ -23,11 +22,8 @@ pub struct InsertTransaction {
     pub governance_authority: solana_address::Address,
     /// ProposalTransaction, account. PDA seeds: ['governance', proposal, option_index, index]
     pub proposal_transaction_account: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
-
     pub rent: solana_address::Address,
 }
 
@@ -239,7 +235,6 @@ impl InsertTransactionBuilder {
 /// `insert_transaction` CPI accounts.
 pub struct InsertTransactionCpiAccounts<'a, 'b> {
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -247,11 +242,8 @@ pub struct InsertTransactionCpiAccounts<'a, 'b> {
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// ProposalTransaction, account. PDA seeds: ['governance', proposal, option_index, index]
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -259,9 +251,7 @@ pub struct InsertTransactionCpiAccounts<'a, 'b> {
 pub struct InsertTransactionCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -269,11 +259,8 @@ pub struct InsertTransactionCpi<'a, 'b> {
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
     /// ProposalTransaction, account. PDA seeds: ['governance', proposal, option_index, index]
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: InsertTransactionInstructionArgs,

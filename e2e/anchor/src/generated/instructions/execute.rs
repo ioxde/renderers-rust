@@ -15,17 +15,11 @@ pub const EXECUTE_DISCRIMINATOR: [u8; 8] = [105, 37, 101, 197, 75, 251, 102, 26]
 #[derive(Debug)]
 pub struct Execute {
     pub source_account: solana_address::Address,
-
     pub mint: solana_address::Address,
-
     pub destination_account: solana_address::Address,
-
     pub owner_delegate: solana_address::Address,
-
     pub extra_metas_account: solana_address::Address,
-
     pub guard: solana_address::Address,
-
     pub instruction_sysvar_account: solana_address::Address,
 }
 
@@ -223,17 +217,11 @@ impl ExecuteBuilder {
 /// `execute` CPI accounts.
 pub struct ExecuteCpiAccounts<'a, 'b> {
     pub source_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub owner_delegate: &'b solana_account_info::AccountInfo<'a>,
-
     pub extra_metas_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub instruction_sysvar_account: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -241,19 +229,12 @@ pub struct ExecuteCpiAccounts<'a, 'b> {
 pub struct ExecuteCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub source_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub owner_delegate: &'b solana_account_info::AccountInfo<'a>,
-
     pub extra_metas_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub guard: &'b solana_account_info::AccountInfo<'a>,
-
     pub instruction_sysvar_account: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: ExecuteInstructionArgs,

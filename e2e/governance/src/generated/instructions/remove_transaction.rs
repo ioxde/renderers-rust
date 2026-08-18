@@ -18,7 +18,6 @@ pub struct RemoveTransaction {
     pub token_owner_record: solana_address::Address,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: solana_address::Address,
-
     pub proposal_transaction_account: solana_address::Address,
     /// Beneficiary Account which would receive lamports from the disposed ProposalTransaction account
     pub beneficiary_account: solana_address::Address,
@@ -166,7 +165,6 @@ pub struct RemoveTransactionCpiAccounts<'a, 'b> {
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
     /// Beneficiary Account which would receive lamports from the disposed ProposalTransaction account
     pub beneficiary_account: &'b solana_account_info::AccountInfo<'a>,
@@ -176,13 +174,11 @@ pub struct RemoveTransactionCpiAccounts<'a, 'b> {
 pub struct RemoveTransactionCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
     /// Governance Authority (Token Owner or Governance Delegate)
     pub governance_authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_transaction_account: &'b solana_account_info::AccountInfo<'a>,
     /// Beneficiary Account which would receive lamports from the disposed ProposalTransaction account
     pub beneficiary_account: &'b solana_account_info::AccountInfo<'a>,

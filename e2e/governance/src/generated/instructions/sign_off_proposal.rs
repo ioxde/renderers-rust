@@ -14,9 +14,7 @@ pub const SIGN_OFF_PROPOSAL_DISCRIMINATOR: u8 = 12;
 #[derive(Debug)]
 pub struct SignOffProposal {
     pub realm_account: solana_address::Address,
-
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// Signatory account signing off the Proposal.
     ///     Or Proposal owner if the owner hasn't appointed any signatories
@@ -162,9 +160,7 @@ impl SignOffProposalBuilder {
 /// `sign_off_proposal` CPI accounts.
 pub struct SignOffProposalCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// Signatory account signing off the Proposal.
     ///     Or Proposal owner if the owner hasn't appointed any signatories
@@ -178,11 +174,8 @@ pub struct SignOffProposalCpiAccounts<'a, 'b> {
 pub struct SignOffProposalCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// Signatory account signing off the Proposal.
     ///     Or Proposal owner if the owner hasn't appointed any signatories

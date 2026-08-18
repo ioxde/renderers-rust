@@ -16,9 +16,7 @@ pub const CREATE_PLATFORM_CONFIG_DISCRIMINATOR: [u8; 8] = [176, 90, 196, 175, 25
 pub struct CreatePlatformConfig {
     /// The account paying for the initialization costs
     pub platform_admin: solana_address::Address,
-
     pub platform_fee_wallet: solana_address::Address,
-
     pub platform_nft_wallet: solana_address::Address,
     /// The platform config account
     pub platform_config: solana_address::Address,
@@ -215,9 +213,7 @@ impl CreatePlatformConfigBuilder {
 pub struct CreatePlatformConfigCpiAccounts<'a, 'b> {
     /// The account paying for the initialization costs
     pub platform_admin: &'b solana_account_info::AccountInfo<'a>,
-
     pub platform_fee_wallet: &'b solana_account_info::AccountInfo<'a>,
-
     pub platform_nft_wallet: &'b solana_account_info::AccountInfo<'a>,
     /// The platform config account
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,
@@ -231,9 +227,7 @@ pub struct CreatePlatformConfigCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// The account paying for the initialization costs
     pub platform_admin: &'b solana_account_info::AccountInfo<'a>,
-
     pub platform_fee_wallet: &'b solana_account_info::AccountInfo<'a>,
-
     pub platform_nft_wallet: &'b solana_account_info::AccountInfo<'a>,
     /// The platform config account
     pub platform_config: &'b solana_account_info::AccountInfo<'a>,

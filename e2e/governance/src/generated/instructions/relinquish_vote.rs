@@ -14,9 +14,7 @@ pub const RELINQUISH_VOTE_DISCRIMINATOR: u8 = 15;
 #[derive(Debug)]
 pub struct RelinquishVote {
     pub realm_account: solana_address::Address,
-
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// TokenOwnerRecord account. PDA seeds: ['governance',realm, vote_governing_token_mint, governing_token_owner]
     pub token_owner_record: solana_address::Address,
@@ -24,7 +22,6 @@ pub struct RelinquishVote {
     pub proposal_vote_record: solana_address::Address,
     /// The Governing Token Mint which was used to cast the vote (vote_governing_token_mint)
     pub governing_token_mint: solana_address::Address,
-
     pub governance_authority: Option<solana_address::Address>,
     /// Optional Beneficiary account which would receive lamports when VoteRecord Account is disposed.
     ///     It's required only when Proposal is still being voted on
@@ -229,9 +226,7 @@ impl RelinquishVoteBuilder {
 /// `relinquish_vote` CPI accounts.
 pub struct RelinquishVoteCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account. PDA seeds: ['governance',realm, vote_governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -239,7 +234,6 @@ pub struct RelinquishVoteCpiAccounts<'a, 'b> {
     pub proposal_vote_record: &'b solana_account_info::AccountInfo<'a>,
     /// The Governing Token Mint which was used to cast the vote (vote_governing_token_mint)
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Optional Beneficiary account which would receive lamports when VoteRecord Account is disposed.
     ///     It's required only when Proposal is still being voted on
@@ -250,11 +244,8 @@ pub struct RelinquishVoteCpiAccounts<'a, 'b> {
 pub struct RelinquishVoteCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account. PDA seeds: ['governance',realm, vote_governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
@@ -262,7 +253,6 @@ pub struct RelinquishVoteCpi<'a, 'b> {
     pub proposal_vote_record: &'b solana_account_info::AccountInfo<'a>,
     /// The Governing Token Mint which was used to cast the vote (vote_governing_token_mint)
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Optional Beneficiary account which would receive lamports when VoteRecord Account is disposed.
     ///     It's required only when Proposal is still being voted on

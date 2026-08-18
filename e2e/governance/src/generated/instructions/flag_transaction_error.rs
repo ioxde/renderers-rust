@@ -162,7 +162,6 @@ pub struct FlagTransactionErrorCpiAccounts<'a, 'b> {
 pub struct FlagTransactionErrorCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord account of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,

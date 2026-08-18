@@ -14,13 +14,10 @@ pub const FINALIZE_VOTE_DISCRIMINATOR: u8 = 14;
 #[derive(Debug)]
 pub struct FinalizeVote {
     pub realm_account: solana_address::Address,
-
     pub governance_account: solana_address::Address,
-
     pub proposal_account: solana_address::Address,
     /// TokenOwnerRecord of the Proposal owner
     pub token_owner_record: solana_address::Address,
-
     pub governing_token_mint: solana_address::Address,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: solana_address::Address,
@@ -200,13 +197,10 @@ impl FinalizeVoteBuilder {
 /// `finalize_vote` CPI accounts.
 pub struct FinalizeVoteCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,
@@ -218,15 +212,11 @@ pub struct FinalizeVoteCpiAccounts<'a, 'b> {
 pub struct FinalizeVoteCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// TokenOwnerRecord of the Proposal owner
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
     /// RealmConfig account. PDA seeds: ['realm-config', realm]
     pub realm_config: &'b solana_account_info::AccountInfo<'a>,

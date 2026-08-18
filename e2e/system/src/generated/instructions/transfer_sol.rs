@@ -14,7 +14,6 @@ pub const TRANSFER_SOL_DISCRIMINATOR: u32 = 2;
 #[derive(Debug)]
 pub struct TransferSol {
     pub source: solana_address::Address,
-
     pub destination: solana_address::Address,
 }
 
@@ -141,7 +140,6 @@ impl TransferSolBuilder {
 /// `transfer_sol` CPI accounts.
 pub struct TransferSolCpiAccounts<'a, 'b> {
     pub source: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -149,9 +147,7 @@ pub struct TransferSolCpiAccounts<'a, 'b> {
 pub struct TransferSolCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub source: &'b solana_account_info::AccountInfo<'a>,
-
     pub destination: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: TransferSolInstructionArgs,

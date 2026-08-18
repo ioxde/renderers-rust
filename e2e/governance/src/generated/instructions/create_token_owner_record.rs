@@ -14,15 +14,11 @@ pub const CREATE_TOKEN_OWNER_RECORD_DISCRIMINATOR: u8 = 23;
 #[derive(Debug)]
 pub struct CreateTokenOwnerRecord {
     pub realm_account: solana_address::Address,
-
     pub governing_token_owner_account: solana_address::Address,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: solana_address::Address,
-
     pub governing_token_mint: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -183,15 +179,11 @@ impl CreateTokenOwnerRecordBuilder {
 /// `create_token_owner_record` CPI accounts.
 pub struct CreateTokenOwnerRecordCpiAccounts<'a, 'b> {
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_owner_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -199,17 +191,12 @@ pub struct CreateTokenOwnerRecordCpiAccounts<'a, 'b> {
 pub struct CreateTokenOwnerRecordCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub realm_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_owner_account: &'b solana_account_info::AccountInfo<'a>,
     /// seeds=['governance', realm, governing_token_mint, governing_token_owner]
     pub token_owner_record: &'b solana_account_info::AccountInfo<'a>,
-
     pub governing_token_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 

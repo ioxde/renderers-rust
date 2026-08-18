@@ -16,11 +16,8 @@ pub const ADD_REQUIRED_SIGNATORY_DISCRIMINATOR: u8 = 29;
 pub struct AddRequiredSignatory {
     /// The Governance account the config is for
     pub governance_account: solana_address::Address,
-
     pub required_signatory_account: solana_address::Address,
-
     pub payer: solana_address::Address,
-
     pub system_program: solana_address::Address,
 }
 
@@ -172,11 +169,8 @@ impl AddRequiredSignatoryBuilder {
 pub struct AddRequiredSignatoryCpiAccounts<'a, 'b> {
     /// The Governance account the config is for
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub required_signatory_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -186,11 +180,8 @@ pub struct AddRequiredSignatoryCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// The Governance account the config is for
     pub governance_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub required_signatory_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub payer: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: AddRequiredSignatoryInstructionArgs,

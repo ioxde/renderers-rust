@@ -14,13 +14,9 @@ pub const WITHDRAW_NONCE_ACCOUNT_DISCRIMINATOR: u32 = 5;
 #[derive(Debug)]
 pub struct WithdrawNonceAccount {
     pub nonce_account: solana_address::Address,
-
     pub recipient_account: solana_address::Address,
-
     pub recent_blockhashes_sysvar: solana_address::Address,
-
     pub rent_sysvar: solana_address::Address,
-
     pub nonce_authority: solana_address::Address,
 }
 
@@ -204,13 +200,9 @@ impl WithdrawNonceAccountBuilder {
 /// `withdraw_nonce_account` CPI accounts.
 pub struct WithdrawNonceAccountCpiAccounts<'a, 'b> {
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recipient_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -218,15 +210,10 @@ pub struct WithdrawNonceAccountCpiAccounts<'a, 'b> {
 pub struct WithdrawNonceAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recipient_account: &'b solana_account_info::AccountInfo<'a>,
-
     pub recent_blockhashes_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub rent_sysvar: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_authority: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: WithdrawNonceAccountInstructionArgs,

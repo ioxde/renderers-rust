@@ -15,9 +15,7 @@ pub const DEPOSIT_DISCRIMINATOR: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182
 pub struct Deposit {
     /// Pays to mint the position
     pub owner: solana_address::Address,
-
     pub authority: solana_address::Address,
-
     pub pool_state: solana_address::Address,
     /// Owner lp token account
     pub owner_lp_token: solana_address::Address,
@@ -275,9 +273,7 @@ impl DepositBuilder {
 pub struct DepositCpiAccounts<'a, 'b> {
     /// Pays to mint the position
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
     /// Owner lp token account
     pub owner_lp_token: &'b solana_account_info::AccountInfo<'a>,
@@ -307,9 +303,7 @@ pub struct DepositCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
     /// Pays to mint the position
     pub owner: &'b solana_account_info::AccountInfo<'a>,
-
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub pool_state: &'b solana_account_info::AccountInfo<'a>,
     /// Owner lp token account
     pub owner_lp_token: &'b solana_account_info::AccountInfo<'a>,

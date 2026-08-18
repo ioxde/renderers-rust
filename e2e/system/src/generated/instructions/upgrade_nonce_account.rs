@@ -116,7 +116,6 @@ pub struct UpgradeNonceAccountCpiAccounts<'a, 'b> {
 pub struct UpgradeNonceAccountCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub nonce_account: &'b solana_account_info::AccountInfo<'a>,
 }
 

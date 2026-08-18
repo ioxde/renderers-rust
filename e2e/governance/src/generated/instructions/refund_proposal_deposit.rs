@@ -148,7 +148,6 @@ pub struct RefundProposalDepositCpiAccounts<'a, 'b> {
 pub struct RefundProposalDepositCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
     pub proposal_account: &'b solana_account_info::AccountInfo<'a>,
     /// PDA Seeds: ['proposal-deposit', proposal, deposit payer]
     pub proposal_deposit_account: &'b solana_account_info::AccountInfo<'a>,
