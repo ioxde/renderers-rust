@@ -242,6 +242,10 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                 },
 
                 visitEvent(node) {
+                    const program = findProgramNodeFromPath(stack.getPath('eventNode'));
+                    if (!program) {
+                        throw new Error('Event must be visited inside a program.');
+                    }
                     const allDiscriminators = node.discriminators ?? [];
                     const isCpiFramed = isEventCpiFramed(node, programEventFraming);
                     const framingConstantName = isCpiFramed
@@ -326,6 +330,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             imports: imports.toString(dependencyMap),
                             matchesCondition: matchesParts.join(' && '),
                             parseHelpers: generateParseHelpers,
+                            program,
                             typeManifest,
                             unidentifiable: !isIdentifiable,
                         }),

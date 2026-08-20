@@ -69,10 +69,11 @@ test('it renders an event with discriminator as a struct with matches and try_pa
         'pub amount: u64,',
         'pub price: u64,',
         'TRADE_EVENT_DISCRIMINATOR',
-        'pub fn matches(data: &[u8]) -> bool',
+        'pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool',
         'data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
-        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
-        'if !Self::matches(data)',
+        'pub fn try_parse(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'program_id == &crate::MY_PROGRAM_ID && data.get(..TRADE_EVENT_DISCRIMINATOR.len())',
+        'if !Self::matches(program_id, data)',
         'Some(Self::deserialize(&mut data))',
     ]);
     codeDoesNotContains(getFromRenderMap(renderMap, 'events/trade_event.rs').content, ['from_bytes']);
@@ -272,11 +273,11 @@ test('it validates all constant discriminators in matches for multi-disc events'
 
     codeContains(code, [
         // matches ANDs the positive form of every discriminator check.
-        'pub fn matches(data: &[u8]) -> bool',
+        'pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool',
         'data.get(..MULTI_DISC_EVENT_DISCRIMINATOR.len()) == Some(&MULTI_DISC_EVENT_DISCRIMINATOR[..]) && data.get(12..16) == Some(&MULTI_DISC_EVENT_DISCRIMINATOR2[..])',
-        // try_parse delegates the discriminator checks to matches.
-        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
-        'if !Self::matches(data)',
+        // try_parse delegates the program and discriminator checks to matches.
+        'pub fn try_parse(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'if !Self::matches(program_id, data)',
         'return None;',
         'Some(Self::deserialize(&mut data))',
     ]);
@@ -496,6 +497,58 @@ test('it does not render try_parse when hidden prefix has a non-fixed-size entry
     codeContains(code, ['pub struct DynamicPrefixEvent', 'DYNAMIC_PREFIX_EVENT_DISCRIMINATOR']);
     codeDoesNotContains(code, ['try_parse']);
 });
+
+test('it guards matches on the program id and gates try_parse solely on matches', () => {
+    const disc = constantValueNode(fixedSizeTypeNode(bytesTypeNode(), 8), bytesValueNode('base16', 'aabbccdd11223344'));
+    const node = programNode({
+        events: [
+            eventNode({
+                data: hiddenPrefixTypeNode(
+                    structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                    [disc],
+                ),
+                discriminators: [constantDiscriminatorNode(disc)],
+                name: 'tradeEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const code = getFromRenderMap(renderMap, 'events/trade_event.rs').content;
+
+    codeContains(code, [
+        // The program compare is ANDed onto the existing condition, never a replacement for it,
+        // so the length proof the raw skip below depends on is preserved.
+        'pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool',
+        'program_id == &crate::MY_PROGRAM_ID && data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        // try_parse keeps a single early return driven by the whole of matches.
+        /pub fn try_parse\(program_id: &solana_address::Address, data: &\[u8\]\) -> Option<Result<Self, std::io::Error>> \{\s*if !Self::matches\(program_id, data\) \{\s*return None;\s*\}/,
+    ]);
+    // No unguarded sibling: every path into the parse helpers carries a program id.
+    codeDoesNotContains(code, ['_unchecked', 'expected_program_id', 'try_into', 'unwrap', 'expect(']);
+});
+
+test('it does not guard events rendered without parse helpers', () => {
+    const node = programNode({
+        events: [
+            eventNode({
+                data: structTypeNode([structFieldTypeNode({ name: 'value', type: numberTypeNode('u32') })]),
+                name: 'simpleEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const code = getFromRenderMap(renderMap, 'events/simple_event.rs').content;
+
+    codeContains(code, ['pub struct SimpleEvent']);
+    codeDoesNotContains(code, ['program_id', 'MY_PROGRAM_ID']);
+});
+
 // --- Program-level event codegen tests ---
 
 test('it does not render program events file when no events have discriminators', () => {
@@ -572,14 +625,15 @@ test('it renders identify and try_parse for events with constant discriminators'
     const code = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
 
     codeContains(code, [
-        'pub fn identify_my_program_event(data: &[u8]) -> Option<MyProgramEventKind>',
+        'pub fn identify_my_program_event(program_id: &solana_address::Address, data: &[u8]) -> Option<MyProgramEventKind>',
+        'if program_id != &crate::MY_PROGRAM_ID',
         // Every event inlines its discriminator checks, mirroring the JS renderer.
         'if data.get(..SETTLE_EVENT_DISCRIMINATOR.len()) == Some(&SETTLE_EVENT_DISCRIMINATOR[..])',
         'return Some(MyProgramEventKind::SettleEvent)',
         'if data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
         'return Some(MyProgramEventKind::TradeEvent)',
-        'pub fn try_parse_my_program_event(data: &[u8]) -> Option<Result<MyProgramEvent, std::io::Error>>',
-        'identify_my_program_event(data)?',
+        'pub fn try_parse_my_program_event(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<MyProgramEvent, std::io::Error>>',
+        'identify_my_program_event(program_id, data)?',
         // Skips are numeric literals (8-byte prefix), so match each arm to keep them distinct.
         /MyProgramEventKind::SettleEvent => \{\s*let mut data = &data\[8\.\.\];\s*SettleEvent::deserialize\(&mut data\)/,
         /MyProgramEventKind::TradeEvent => \{\s*let mut data = &data\[8\.\.\];\s*TradeEvent::deserialize\(&mut data\)/,
@@ -1156,6 +1210,35 @@ test('it omits Eq on the aggregate event enum when a variant does not derive it'
     codeContains(code, [/#\[derive\(Clone, Debug, PartialEq\)\]\s*pub enum MyProgramEvent \{/]);
 });
 
+test('it guards the aggregate inside identify, which owns every byte comparison', () => {
+    const disc = constantValueNode(fixedSizeTypeNode(bytesTypeNode(), 8), bytesValueNode('base16', 'aabbccdd11223344'));
+    const node = programNode({
+        events: [
+            eventNode({
+                // No framing: the guard is independent of the CPI framing check.
+                data: structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                discriminators: [constantDiscriminatorNode(disc)],
+                name: 'tradeEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const code = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(code, [
+        // The guard sits in identify, ahead of the discriminator comparisons it owns.
+        /pub fn identify_my_program_event\(program_id: &solana_address::Address, data: &\[u8\]\) -> Option<MyProgramEventKind> \{\s*if program_id != &crate::MY_PROGRAM_ID \{\s*return None;\s*\}\s*if data\.get\(\.\.TRADE_EVENT_DISCRIMINATOR\.len\(\)\)/,
+        // The aggregate parse guards once, through identify, so the two cannot disagree.
+        'pub fn try_parse_my_program_event(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<MyProgramEvent, std::io::Error>>',
+        'let event_kind = identify_my_program_event(program_id, data)?;',
+    ]);
+    // A foreign program is ordinary when iterating a transaction, so the guard returns a value.
+    codeDoesNotContains(code, ['Err(std::io::Error::new', '_unchecked', 'expected_program_id']);
+});
+
 // --- Event framing (CPI-framed) tests ---
 
 const cpiFraming = { kind: 'anchorEventCpi', sharedConstantName: 'eventCpiPrefix' as CamelCaseString };
@@ -1228,12 +1311,13 @@ test('it generates try_parse that delegates framing and discriminator validation
     const tradeEventCode = getFromRenderMap(renderMap, 'events/trade_event.rs').content;
 
     codeContains(tradeEventCode, [
-        // matches validates the CPI framing prefix and the event discriminator together.
-        'pub fn matches(data: &[u8]) -> bool',
-        'data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..]) && data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
+        // matches validates the program, the CPI framing prefix and the event discriminator
+        // together; the framing compare is what proves data is long enough for the skip below.
+        'pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool',
+        'program_id == &crate::MY_PROGRAM_ID && data.get(..EVENT_CPI_PREFIX.len()) == Some(&EVENT_CPI_PREFIX[..]) && data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])',
         // try_parse signals mismatch as a value instead of an error.
-        'pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>>',
-        'if !Self::matches(data)',
+        'pub fn try_parse(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<Self, std::io::Error>>',
+        'if !Self::matches(program_id, data)',
         'return None;',
         // Both discriminator sizes are known, so the skip folds to a literal
         // with an explanatory comment on the line above.
@@ -1581,6 +1665,13 @@ test('it excludes framing-only events from identify and try_parse', () => {
 
         // BareEvent would shadow every framed event (it sorts first), so it is excluded entirely.
         codeDoesNotContains(programEventsCode, ['BareEvent']);
+        // Knowing the program does not make it identifiable: the framing tag is shared by every
+        // Anchor program and by every framed sibling within this one.
+        codeDoesNotContains(getFromRenderMap(renderMap, 'events/bare_event.rs').content, [
+            'pub fn matches',
+            'pub fn try_parse',
+            'program_id',
+        ]);
         codeContains(programEventsCode, [
             'pub enum MyProgramEventKind',
             'return Some(MyProgramEventKind::TradeEvent)',
@@ -1780,12 +1871,12 @@ test('it documents the transpose hint and the program-level filter_map example',
     const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
 
     // Per-event docs carry the transpose hint but no code example.
-    codeContains(tradeEventCode, ['/// Use [`Option::transpose`] to propagate the failure with `?`.']);
+    codeContains(tradeEventCode, ['to propagate the failure with `?`.']);
     codeDoesNotContains(tradeEventCode, ['```ignore']);
     codeContains(programEventsCode, [
-        'Use [`Option::transpose`] to',
+        '[`Option::transpose`] to propagate failures',
         '/// let events: Vec<MyProgramEvent> = datas',
-        '///     .filter_map(|data| try_parse_my_program_event(data))',
+        '///     .filter_map(|data| try_parse_my_program_event(program_id, data))',
         '///     .collect::<Result<_, _>>()?;',
     ]);
 });

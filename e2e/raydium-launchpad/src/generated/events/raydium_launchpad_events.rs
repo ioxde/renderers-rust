@@ -29,8 +29,17 @@ pub enum RaydiumLaunchpadEventKind {
 }
 
 /// Identifies a `raydium_launchpad` event from the provided data.
+///
+/// A foreign `program_id` is a `None`, not an error: callers iterate whole transactions where
+/// other programs are ordinary.
 /// Data that lacks the shared CPI framing is rejected with a single compare.
-pub fn identify_raydium_launchpad_event(data: &[u8]) -> Option<RaydiumLaunchpadEventKind> {
+pub fn identify_raydium_launchpad_event(
+    program_id: &solana_address::Address,
+    data: &[u8],
+) -> Option<RaydiumLaunchpadEventKind> {
+    if program_id != &crate::RAYDIUM_LAUNCHPAD_ID {
+        return None;
+    }
     if data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len()) == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
     {
         if data.get(8..16) == Some(&CLAIM_VESTED_EVENT_DISCRIMINATOR[..]) {
@@ -60,19 +69,21 @@ pub enum RaydiumLaunchpadEvent {
 
 /// Tries to parse a `raydium_launchpad` event from the provided data.
 ///
-/// Returns `None` when no event matches; `Some(Err(_))` when one matches but fails to
-/// deserialize. Use [`Option::transpose`] to propagate failures with `?`, or scan a batch:
+/// `None` when [`identify_raydium_launchpad_event`] finds nothing; `Some(Err(_))`
+/// when one matches but fails to deserialize. Use [`Option::transpose`] to propagate failures
+/// with `?`, or scan a batch:
 ///
 /// ```ignore
 /// let events: Vec<RaydiumLaunchpadEvent> = datas
 ///     .iter()
-///     .filter_map(|data| try_parse_raydium_launchpad_event(data))
+///     .filter_map(|data| try_parse_raydium_launchpad_event(program_id, data))
 ///     .collect::<Result<_, _>>()?;
 /// ```
 pub fn try_parse_raydium_launchpad_event(
+    program_id: &solana_address::Address,
     data: &[u8],
 ) -> Option<Result<RaydiumLaunchpadEvent, std::io::Error>> {
-    let event_kind = identify_raydium_launchpad_event(data)?;
+    let event_kind = identify_raydium_launchpad_event(program_id, data)?;
     Some(match event_kind {
         RaydiumLaunchpadEventKind::ClaimVestedEvent => {
             // ANCHOR_EVENT_CPI_DISCRIMINATOR (8) + CLAIM_VESTED_EVENT_DISCRIMINATOR (8)

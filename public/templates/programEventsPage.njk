@@ -19,10 +19,16 @@ pub enum {{ program.name | pascalCase }}EventKind {
 }
 
 /// Identifies a `{{ program.name | snakeCase }}` event from the provided data.
+///
+/// A foreign `program_id` is a `None`, not an error: callers iterate whole transactions where
+/// other programs are ordinary.
 {% if framingCheck %}
 /// Data that lacks the shared CPI framing is rejected with a single compare.
 {% endif %}
-pub fn identify_{{ program.name | snakeCase }}_event(data: &[u8]) -> Option<{{ program.name | pascalCase }}EventKind> {
+pub fn identify_{{ program.name | snakeCase }}_event(program_id: &solana_address::Address, data: &[u8]) -> Option<{{ program.name | pascalCase }}EventKind> {
+    if program_id != &crate::{{ program.name | snakeCase | upper }}_ID {
+        return None;
+    }
 {% if framingCheck %}
     if {{ framingCheck }} {
 {% for event in framedEvents | sort(false, false, 'name') %}
@@ -50,17 +56,18 @@ pub enum {{ program.name | pascalCase }}Event {
 
 /// Tries to parse a `{{ program.name | snakeCase }}` event from the provided data.
 ///
-/// Returns `None` when no event matches; `Some(Err(_))` when one matches but fails to
-/// deserialize. Use [`Option::transpose`] to propagate failures with `?`, or scan a batch:
+/// `None` when [`identify_{{ program.name | snakeCase }}_event`] finds nothing; `Some(Err(_))`
+/// when one matches but fails to deserialize. Use [`Option::transpose`] to propagate failures
+/// with `?`, or scan a batch:
 ///
 /// ```ignore
 /// let events: Vec<{{ program.name | pascalCase }}Event> = datas
 ///     .iter()
-///     .filter_map(|data| try_parse_{{ program.name | snakeCase }}_event(data))
+///     .filter_map(|data| try_parse_{{ program.name | snakeCase }}_event(program_id, data))
 ///     .collect::<Result<_, _>>()?;
 /// ```
-pub fn try_parse_{{ program.name | snakeCase }}_event(data: &[u8]) -> Option<Result<{{ program.name | pascalCase }}Event, std::io::Error>> {
-    let event_kind = identify_{{ program.name | snakeCase }}_event(data)?;
+pub fn try_parse_{{ program.name | snakeCase }}_event(program_id: &solana_address::Address, data: &[u8]) -> Option<Result<{{ program.name | pascalCase }}Event, std::io::Error>> {
+    let event_kind = identify_{{ program.name | snakeCase }}_event(program_id, data)?;
     Some(match event_kind {
 {% for event in eventsWithDiscriminators | sort(false, false, 'name') %}
         {{ program.name | pascalCase }}EventKind::{{ event.name | pascalCase }} => {

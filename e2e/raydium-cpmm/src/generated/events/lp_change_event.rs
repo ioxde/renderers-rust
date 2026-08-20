@@ -29,17 +29,23 @@ pub struct LpChangeEvent {
 pub const LP_CHANGE_EVENT_DISCRIMINATOR: [u8; 8] = [121, 163, 205, 201, 57, 218, 117, 60];
 
 impl LpChangeEvent {
+    /// Anchor discriminators are derived from names alone, so identical bytes recur across
+    /// programs and the bytes alone cannot tell this event from a foreign one.
     #[inline(always)]
-    pub fn matches(data: &[u8]) -> bool {
-        data.get(..LP_CHANGE_EVENT_DISCRIMINATOR.len()) == Some(&LP_CHANGE_EVENT_DISCRIMINATOR[..])
+    pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool {
+        program_id == &crate::RAYDIUM_CP_SWAP_ID
+            && data.get(..LP_CHANGE_EVENT_DISCRIMINATOR.len())
+                == Some(&LP_CHANGE_EVENT_DISCRIMINATOR[..])
     }
 
-    /// Returns `None` when the data does not match this event's discriminator
-    /// bytes; `Some(Err(_))` when it matches but the body fails to deserialize.
-    /// Use [`Option::transpose`] to propagate the failure with `?`.
+    /// `None` when [`Self::matches`] is false; `Some(Err(_))` when it matches but the body fails
+    /// to deserialize. Use [`Option::transpose`] to propagate the failure with `?`.
     #[inline(always)]
-    pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>> {
-        if !Self::matches(data) {
+    pub fn try_parse(
+        program_id: &solana_address::Address,
+        data: &[u8],
+    ) -> Option<Result<Self, std::io::Error>> {
+        if !Self::matches(program_id, data) {
             return None;
         }
         let mut data = &data[8..];

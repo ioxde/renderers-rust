@@ -26,19 +26,24 @@ pub struct PoolCreateEvent {
 pub const POOL_CREATE_EVENT_DISCRIMINATOR: [u8; 8] = [151, 215, 226, 9, 118, 161, 115, 174];
 
 impl PoolCreateEvent {
+    /// Anchor discriminators are derived from names alone, so identical bytes recur across
+    /// programs and the bytes alone cannot tell this event from a foreign one.
     #[inline(always)]
-    pub fn matches(data: &[u8]) -> bool {
-        data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len())
-            == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
+    pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool {
+        program_id == &crate::RAYDIUM_LAUNCHPAD_ID
+            && data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len())
+                == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
             && data.get(8..16) == Some(&POOL_CREATE_EVENT_DISCRIMINATOR[..])
     }
 
-    /// Returns `None` when the data does not match this event's discriminator
-    /// bytes; `Some(Err(_))` when it matches but the body fails to deserialize.
-    /// Use [`Option::transpose`] to propagate the failure with `?`.
+    /// `None` when [`Self::matches`] is false; `Some(Err(_))` when it matches but the body fails
+    /// to deserialize. Use [`Option::transpose`] to propagate the failure with `?`.
     #[inline(always)]
-    pub fn try_parse(data: &[u8]) -> Option<Result<Self, std::io::Error>> {
-        if !Self::matches(data) {
+    pub fn try_parse(
+        program_id: &solana_address::Address,
+        data: &[u8],
+    ) -> Option<Result<Self, std::io::Error>> {
+        if !Self::matches(program_id, data) {
             return None;
         }
         // ANCHOR_EVENT_CPI_DISCRIMINATOR (8) + POOL_CREATE_EVENT_DISCRIMINATOR (8)

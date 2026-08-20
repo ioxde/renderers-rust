@@ -1,0 +1,11 @@
+[package]
+name = "codama-renderers-rust-e2e-event-collision"
+version = "0.0.0"
+edition = "2021"
+
+[features]
+test-sbf = []
+
+[dependencies]
+borsh = { workspace = true }
+solana-address = { workspace = true, features = ["borsh", "copy", "curve25519", "decode"] }

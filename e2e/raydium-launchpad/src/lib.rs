@@ -166,28 +166,36 @@ mod event_tests {
         }
     }
 
+    fn claim_vested_bytes() -> Vec<u8> {
+        framed(
+            CLAIM_VESTED_EVENT_DISCRIMINATOR,
+            &borsh::to_vec(&claim_vested_event()).unwrap(),
+        )
+    }
+
+    fn foreign_program() -> Address {
+        Address::new_from_array([9; 32])
+    }
+
     #[test]
     fn try_parse_decodes_a_matching_event() {
-        let event = claim_vested_event();
-        let data = framed(
-            CLAIM_VESTED_EVENT_DISCRIMINATOR,
-            &borsh::to_vec(&event).unwrap(),
-        );
+        let data = claim_vested_bytes();
 
-        assert!(ClaimVestedEvent::matches(&data));
-        assert_eq!(ClaimVestedEvent::try_parse(&data).unwrap().unwrap(), event);
+        assert!(ClaimVestedEvent::matches(&crate::ID, &data));
+        assert_eq!(
+            ClaimVestedEvent::try_parse(&crate::ID, &data)
+                .unwrap()
+                .unwrap(),
+            claim_vested_event()
+        );
     }
 
     #[test]
     fn try_parse_returns_none_for_another_event_of_the_same_program() {
-        let event = claim_vested_event();
-        let data = framed(
-            CLAIM_VESTED_EVENT_DISCRIMINATOR,
-            &borsh::to_vec(&event).unwrap(),
-        );
+        let data = claim_vested_bytes();
 
-        assert!(!TradeEvent::matches(&data));
-        assert!(TradeEvent::try_parse(&data).is_none());
+        assert!(!TradeEvent::matches(&crate::ID, &data));
+        assert!(TradeEvent::try_parse(&crate::ID, &data).is_none());
     }
 
     #[test]
@@ -195,42 +203,132 @@ mod event_tests {
         // Valid CPI framing, but a discriminator unknown to this program.
         let data = framed([0xff; 8], &[1, 2, 3]);
 
-        assert!(ClaimVestedEvent::try_parse(&data).is_none());
-        assert!(identify_raydium_launchpad_event(&data).is_none());
-        assert!(try_parse_raydium_launchpad_event(&data).is_none());
+        assert!(ClaimVestedEvent::try_parse(&crate::ID, &data).is_none());
+        assert!(identify_raydium_launchpad_event(&crate::ID, &data).is_none());
+        assert!(try_parse_raydium_launchpad_event(&crate::ID, &data).is_none());
     }
 
     #[test]
     fn try_parse_surfaces_an_error_for_a_truncated_body() {
-        // The discriminator matches, so the failure to deserialize is a real error.
+        // The discriminator matches, so the failure to deserialize is a real error, not a miss.
         let data = framed(CLAIM_VESTED_EVENT_DISCRIMINATOR, &[1, 2, 3]);
 
-        assert!(ClaimVestedEvent::matches(&data));
-        assert!(ClaimVestedEvent::try_parse(&data).unwrap().is_err());
-        assert!(try_parse_raydium_launchpad_event(&data).unwrap().is_err());
+        assert!(ClaimVestedEvent::matches(&crate::ID, &data));
+        assert!(ClaimVestedEvent::try_parse(&crate::ID, &data)
+            .unwrap()
+            .is_err());
+        assert!(try_parse_raydium_launchpad_event(&crate::ID, &data)
+            .unwrap()
+            .is_err());
+    }
+
+    /// The body slice starts exactly at the end of the framing plus discriminator, so an empty
+    /// body is the boundary case for the raw indexing in the generated skip.
+    #[test]
+    fn try_parse_surfaces_an_error_for_an_empty_body() {
+        let data = framed(CLAIM_VESTED_EVENT_DISCRIMINATOR, &[]);
+        assert_eq!(data.len(), 16);
+
+        assert!(ClaimVestedEvent::matches(&crate::ID, &data));
+        assert!(ClaimVestedEvent::try_parse(&crate::ID, &data)
+            .unwrap()
+            .is_err());
+        assert!(try_parse_raydium_launchpad_event(&crate::ID, &data)
+            .unwrap()
+            .is_err());
     }
 
     #[test]
     fn identify_and_try_parse_dispatch_program_events() {
-        let event = claim_vested_event();
-        let data = framed(
-            CLAIM_VESTED_EVENT_DISCRIMINATOR,
-            &borsh::to_vec(&event).unwrap(),
-        );
+        let data = claim_vested_bytes();
 
         assert_eq!(
-            identify_raydium_launchpad_event(&data),
+            identify_raydium_launchpad_event(&crate::ID, &data),
             Some(RaydiumLaunchpadEventKind::ClaimVestedEvent)
         );
         assert_eq!(
-            try_parse_raydium_launchpad_event(&data).unwrap().unwrap(),
-            RaydiumLaunchpadEvent::ClaimVestedEvent(event)
+            try_parse_raydium_launchpad_event(&crate::ID, &data)
+                .unwrap()
+                .unwrap(),
+            RaydiumLaunchpadEvent::ClaimVestedEvent(claim_vested_event())
         );
     }
 
     #[test]
     fn identify_returns_none_for_unframed_data() {
-        assert!(identify_raydium_launchpad_event(&[0u8; 32]).is_none());
-        assert!(identify_raydium_launchpad_event(&[]).is_none());
+        assert!(identify_raydium_launchpad_event(&crate::ID, &[0u8; 32]).is_none());
+        assert!(identify_raydium_launchpad_event(&crate::ID, &[]).is_none());
+    }
+
+    #[test]
+    fn parse_helpers_reject_data_emitted_by_another_program() {
+        let data = claim_vested_bytes();
+
+        assert!(!ClaimVestedEvent::matches(&foreign_program(), &data));
+        assert!(ClaimVestedEvent::try_parse(&foreign_program(), &data).is_none());
+        assert!(identify_raydium_launchpad_event(&foreign_program(), &data).is_none());
+        assert!(try_parse_raydium_launchpad_event(&foreign_program(), &data).is_none());
+    }
+
+    /// A program mismatch is a miss, not a decode failure: `Some(Err(_))` is the slot for a body
+    /// that failed to deserialize, and conflating the two makes callers log every foreign event.
+    #[test]
+    fn a_program_mismatch_is_never_reported_as_a_decode_error() {
+        let data = claim_vested_bytes();
+
+        assert!(matches!(
+            ClaimVestedEvent::try_parse(&foreign_program(), &data),
+            None
+        ));
+        assert!(matches!(
+            try_parse_raydium_launchpad_event(&foreign_program(), &data),
+            None
+        ));
+    }
+
+    /// The generated skip indexes raw (`&data[16..]`), which is only safe because `matches`
+    /// proves the length. Every short input must fall out as a miss rather than a panic.
+    #[test]
+    fn short_inputs_are_misses_rather_than_panics() {
+        let framing_only = ANCHOR_EVENT_CPI_DISCRIMINATOR.to_vec();
+        let mut one_short = claim_vested_bytes();
+        one_short.truncate(15);
+
+        for data in [vec![0u8; 4], framing_only, one_short, Vec::new()] {
+            assert!(!ClaimVestedEvent::matches(&crate::ID, &data));
+            assert!(ClaimVestedEvent::try_parse(&crate::ID, &data).is_none());
+            assert!(identify_raydium_launchpad_event(&crate::ID, &data).is_none());
+            assert!(try_parse_raydium_launchpad_event(&crate::ID, &data).is_none());
+        }
+    }
+
+    /// `matches` is the sole gate on `try_parse`, and `identify` the sole gate on the aggregate.
+    #[test]
+    fn the_gates_agree_with_what_they_gate() {
+        let mut one_short = claim_vested_bytes();
+        one_short.truncate(15);
+        let inputs = [
+            claim_vested_bytes(),
+            framed(CLAIM_VESTED_EVENT_DISCRIMINATOR, &[]),
+            framed(CLAIM_VESTED_EVENT_DISCRIMINATOR, &[1, 2, 3]),
+            framed([0xff; 8], &[1, 2, 3]),
+            ANCHOR_EVENT_CPI_DISCRIMINATOR.to_vec(),
+            one_short,
+            vec![0u8; 4],
+            Vec::new(),
+        ];
+
+        for program_id in [crate::ID, foreign_program()] {
+            for data in &inputs {
+                assert_eq!(
+                    ClaimVestedEvent::matches(&program_id, data),
+                    ClaimVestedEvent::try_parse(&program_id, data).is_some(),
+                );
+                assert_eq!(
+                    identify_raydium_launchpad_event(&program_id, data).is_none(),
+                    try_parse_raydium_launchpad_event(&program_id, data).is_none(),
+                );
+            }
+        }
     }
 }

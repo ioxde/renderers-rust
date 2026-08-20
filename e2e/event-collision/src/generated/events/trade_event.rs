@@ -5,30 +5,15 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
-use crate::generated::events::ANCHOR_EVENT_CPI_DISCRIMINATOR;
-use crate::generated::types::PoolStatus;
-use crate::generated::types::TradeDirection;
 use borsh::BorshDeserialize;
 use borsh::BorshSerialize;
 use solana_address::Address;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 pub struct TradeEvent {
-    pub pool_state: Address,
-    pub total_base_sell: u64,
-    pub virtual_base: u64,
-    pub virtual_quote: u64,
-    pub real_base_before: u64,
-    pub real_quote_before: u64,
-    pub real_base_after: u64,
-    pub real_quote_after: u64,
+    pub user: Address,
     pub amount_in: u64,
     pub amount_out: u64,
-    pub protocol_fee: u64,
-    pub platform_fee: u64,
-    pub share_fee: u64,
-    pub trade_direction: TradeDirection,
-    pub pool_status: PoolStatus,
 }
 
 pub const TRADE_EVENT_DISCRIMINATOR: [u8; 8] = [189, 219, 127, 211, 78, 230, 97, 238];
@@ -38,10 +23,8 @@ impl TradeEvent {
     /// programs and the bytes alone cannot tell this event from a foreign one.
     #[inline(always)]
     pub fn matches(program_id: &solana_address::Address, data: &[u8]) -> bool {
-        program_id == &crate::RAYDIUM_LAUNCHPAD_ID
-            && data.get(..ANCHOR_EVENT_CPI_DISCRIMINATOR.len())
-                == Some(&ANCHOR_EVENT_CPI_DISCRIMINATOR[..])
-            && data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..])
+        program_id == &crate::ALPHA_ID
+            && data.get(..TRADE_EVENT_DISCRIMINATOR.len()) == Some(&TRADE_EVENT_DISCRIMINATOR[..])
     }
 
     /// `None` when [`Self::matches`] is false; `Some(Err(_))` when it matches but the body fails
@@ -54,8 +37,7 @@ impl TradeEvent {
         if !Self::matches(program_id, data) {
             return None;
         }
-        // ANCHOR_EVENT_CPI_DISCRIMINATOR (8) + TRADE_EVENT_DISCRIMINATOR (8)
-        let mut data = &data[16..];
+        let mut data = &data[8..];
         Some(Self::deserialize(&mut data))
     }
 }
