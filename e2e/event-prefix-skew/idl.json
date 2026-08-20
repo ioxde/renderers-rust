@@ -1,0 +1,206 @@
+{
+  "additionalPrograms": [
+    {
+      "kind": "programNode",
+      "name": "framed",
+      "publicKey": "So11111111111111111111111111111111111111112",
+      "version": "0.0.0",
+      "events": [
+        {
+          "kind": "eventNode",
+          "name": "framedSkewedEvent",
+          "framing": {
+            "kind": "anchorEventCpi",
+            "sharedConstantName": "anchorEventCpiDiscriminator"
+          },
+          "data": {
+            "kind": "hiddenPrefixTypeNode",
+            "type": {
+              "kind": "structTypeNode",
+              "fields": [
+                {
+                  "kind": "structFieldTypeNode",
+                  "name": "amount",
+                  "type": {
+                    "kind": "numberTypeNode",
+                    "format": "u64",
+                    "endian": "le"
+                  }
+                }
+              ]
+            },
+            "prefix": [
+              {
+                "kind": "constantValueNode",
+                "type": {
+                  "kind": "fixedSizeTypeNode",
+                  "size": 8,
+                  "type": {
+                    "kind": "bytesTypeNode"
+                  }
+                },
+                "value": {
+                  "kind": "bytesValueNode",
+                  "data": "e445a52e51cb9a1d",
+                  "encoding": "base16"
+                }
+              },
+              {
+                "kind": "constantValueNode",
+                "type": {
+                  "kind": "fixedSizeTypeNode",
+                  "size": 8,
+                  "type": {
+                    "kind": "bytesTypeNode"
+                  }
+                },
+                "value": {
+                  "kind": "bytesValueNode",
+                  "data": "bddb7fd34ee661ee",
+                  "encoding": "base16"
+                }
+              },
+              {
+                "kind": "constantValueNode",
+                "type": {
+                  "kind": "fixedSizeTypeNode",
+                  "size": 8,
+                  "type": {
+                    "kind": "bytesTypeNode"
+                  }
+                },
+                "value": {
+                  "kind": "bytesValueNode",
+                  "data": "deadbeefdeadbeef",
+                  "encoding": "base16"
+                }
+              }
+            ]
+          },
+          "discriminators": [
+            {
+              "kind": "constantDiscriminatorNode",
+              "offset": 0,
+              "constant": {
+                "kind": "constantValueNode",
+                "type": {
+                  "kind": "fixedSizeTypeNode",
+                  "size": 8,
+                  "type": {
+                    "kind": "bytesTypeNode"
+                  }
+                },
+                "value": {
+                  "kind": "bytesValueNode",
+                  "data": "e445a52e51cb9a1d",
+                  "encoding": "base16"
+                }
+              }
+            },
+            {
+              "kind": "constantDiscriminatorNode",
+              "offset": 8,
+              "constant": {
+                "kind": "constantValueNode",
+                "type": {
+                  "kind": "fixedSizeTypeNode",
+                  "size": 8,
+                  "type": {
+                    "kind": "bytesTypeNode"
+                  }
+                },
+                "value": {
+                  "kind": "bytesValueNode",
+                  "data": "bddb7fd34ee661ee",
+                  "encoding": "base16"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "program": {
+    "kind": "programNode",
+    "name": "plain",
+    "publicKey": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+    "version": "0.0.0",
+    "events": [
+      {
+        "kind": "eventNode",
+        "name": "skewedEvent",
+        "data": {
+          "kind": "hiddenPrefixTypeNode",
+          "type": {
+            "kind": "structTypeNode",
+            "fields": [
+              {
+                "kind": "structFieldTypeNode",
+                "name": "amount",
+                "type": {
+                  "kind": "numberTypeNode",
+                  "format": "u64",
+                  "endian": "le"
+                }
+              }
+            ]
+          },
+          "prefix": [
+            {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "fixedSizeTypeNode",
+                "size": 8,
+                "type": {
+                  "kind": "bytesTypeNode"
+                }
+              },
+              "value": {
+                "kind": "bytesValueNode",
+                "data": "aabbccdd11223344",
+                "encoding": "base16"
+              }
+            },
+            {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "fixedSizeTypeNode",
+                "size": 8,
+                "type": {
+                  "kind": "bytesTypeNode"
+                }
+              },
+              "value": {
+                "kind": "bytesValueNode",
+                "data": "1122334455667788",
+                "encoding": "base16"
+              }
+            }
+          ]
+        },
+        "discriminators": [
+          {
+            "kind": "constantDiscriminatorNode",
+            "offset": 0,
+            "constant": {
+              "kind": "constantValueNode",
+              "type": {
+                "kind": "fixedSizeTypeNode",
+                "size": 8,
+                "type": {
+                  "kind": "bytesTypeNode"
+                }
+              },
+              "value": {
+                "kind": "bytesValueNode",
+                "data": "aabbccdd11223344",
+                "encoding": "base16"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -159,11 +159,11 @@ export function getDiscriminatorConditions(scope: {
     importPrefix: string | null;
     prefix: string;
     typeManifestVisitor: ReturnType<typeof getTypeManifestVisitor>;
-}): { conditions: string[]; imports: ImportMap } {
+}): { conditions: ByteCheck[]; imports: ImportMap } {
     const imports = new ImportMap();
     const conditions = scope.discriminatorNodes
         .map(node => getDiscriminatorCondition(node, scope, imports))
-        .filter(Boolean) as string[];
+        .filter(Boolean) as ByteCheck[];
     return { conditions, imports };
 }
 
@@ -178,7 +178,7 @@ function getDiscriminatorCondition(
         typeManifestVisitor: ReturnType<typeof getTypeManifestVisitor>;
     },
     imports: ImportMap,
-): string | null {
+): ByteCheck | null {
     switch (discriminatorNode.kind) {
         case 'sizeDiscriminatorNode':
             return getSizeCondition(discriminatorNode);
@@ -191,8 +191,11 @@ function getDiscriminatorCondition(
     }
 }
 
-function getSizeCondition(discriminatorNode: SizeDiscriminatorNode): string {
-    return `data.len() == ${discriminatorNode.size}`;
+function getSizeCondition(discriminatorNode: SizeDiscriminatorNode): ByteCheck {
+    return {
+        extent: { literal: discriminatorNode.size, terms: [] },
+        render: `data.len() == ${discriminatorNode.size}`,
+    };
 }
 
 function getConstantCondition(
@@ -203,7 +206,7 @@ function getConstantCondition(
         prefix: string;
     },
     imports: ImportMap,
-): string {
+): ByteCheck {
     const { discriminatorNodes, importPrefix, prefix } = scope;
     const constName = snakeCase(constantDiscriminatorName(prefix, discriminatorNode, discriminatorNodes)).toUpperCase();
     if (importPrefix !== null) {
@@ -214,23 +217,84 @@ function getConstantCondition(
 }
 
 /**
- * Renders a `data` vs discriminator constant check. Scalar number consts compare via
- * `to_le/be_bytes`; ranges are precomputed literals (clippy::arithmetic_side_effects).
+ * Leading bytes something guarantees are present: a literal count, plus the named constants
+ * whose runtime `.len()` adds to it when their size is not known at generation time.
  */
-export function renderByteCheck(name: string, type: TypeNode, offset: number): string {
+export type ByteExtent = { literal: number; terms: string[] };
+
+/**
+ * A rendered byte check together with the {@link ByteExtent} it proves. The pair travels as one
+ * value so a caller cannot gate on the check while sizing its slices from somewhere else.
+ */
+export type ByteCheck = { extent: ByteExtent; render: string };
+
+/**
+ * Renders a `data` vs discriminator constant check and the bytes it proves are present. Scalar
+ * number consts compare via `to_le/be_bytes`; ranges are precomputed literals
+ * (clippy::arithmetic_side_effects).
+ */
+export function renderByteCheck(name: string, type: TypeNode, offset: number): ByteCheck {
     if (isNode(type, 'numberTypeNode')) {
         const byteSize = getNumberByteSize(type.format);
         const range = offset === 0 ? `..${byteSize}` : `${offset}..${offset + byteSize}`;
-        return `data.get(${range}) == Some(&${name}.${numberBytesFn(type)}())`;
-    }
-    if (offset === 0) {
-        return `data.get(..${name}.len()) == Some(&${name}[..])`;
+        return {
+            extent: { literal: offset + byteSize, terms: [] },
+            render: `data.get(${range}) == Some(&${name}.${numberBytesFn(type)}())`,
+        };
     }
     const size = staticByteSize(type);
-    if (size !== null) {
-        return `data.get(${offset}..${offset + size}) == Some(&${name}[..])`;
+    if (offset === 0) {
+        return {
+            extent: size === null ? { literal: 0, terms: [name] } : { literal: size, terms: [] },
+            render: `data.get(..${name}.len()) == Some(&${name}[..])`,
+        };
     }
-    return `data.get(${offset}..).is_some_and(|tail| tail.starts_with(&${name}[..]))`;
+    if (size !== null) {
+        return {
+            extent: { literal: offset + size, terms: [] },
+            render: `data.get(${offset}..${offset + size}) == Some(&${name}[..])`,
+        };
+    }
+    return {
+        extent: { literal: offset, terms: [name] },
+        render: `data.get(${offset}..).is_some_and(|tail| tail.starts_with(&${name}[..]))`,
+    };
+}
+
+/** Whether `proof` guarantees every byte `needed` counts, `.len()` terms included. */
+function coversExtent(proof: ByteExtent, needed: ByteExtent): boolean {
+    if (proof.literal < needed.literal) return false;
+    const unmatched = [...proof.terms];
+    return needed.terms.every(term => {
+        const index = unmatched.indexOf(term);
+        if (index < 0) return false;
+        unmatched.splice(index, 1);
+        return true;
+    });
+}
+
+/**
+ * How a guard built from `conditions` covers a slice that consumes `skip` bytes: already proven,
+ * closed by one extra clause, or beyond what a clause can state without arithmetic.
+ */
+export type SkipCoverage = { kind: 'covered' } | { kind: 'guard'; render: string } | { kind: 'unprovable' };
+
+/**
+ * Reconciles what a generated guard proves with what the code it gates consumes, so a raw index
+ * past the guard can never run off the end of `data`. Callers that cannot emit the returned guard
+ * must drop the gated code rather than emit a slice the guard does not cover.
+ */
+export function getSkipCoverage(conditions: ByteCheck[], skip: ByteExtent): SkipCoverage {
+    if (skip.literal === 0 && skip.terms.length === 0) {
+        return { kind: 'covered' };
+    }
+    if (conditions.some(condition => coversExtent(condition.extent, skip))) {
+        return { kind: 'covered' };
+    }
+    if (skip.terms.length > 0) {
+        return { kind: 'unprovable' };
+    }
+    return { kind: 'guard', render: `data.len() >= ${skip.literal}` };
 }
 
 /** Byte size of a constant discriminator, when statically known. */
@@ -278,7 +342,7 @@ function getFieldCondition(
         prefix: string;
     },
     imports: ImportMap,
-): string | null {
+): ByteCheck | null {
     const { fields, importPrefix, prefix } = scope;
     const field = fields.find(f => f.name === discriminatorNode.name);
     if (!field || !field.defaultValue || !isNode(field.defaultValue, VALUE_NODES)) {

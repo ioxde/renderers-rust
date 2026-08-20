@@ -27,6 +27,7 @@ test_project system
 test_project memo
 test_project governance
 test_project_with_tests event-collision
+test_project_with_tests event-prefix-skew
 # test_anchor_project meteora  # blocked: idl.json has no top-level `address`, so programs.rs emits address!("") which fails const-eval
 test_anchor_project anchor
 test_anchor_project raydium-cpmm

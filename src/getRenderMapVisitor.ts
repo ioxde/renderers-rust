@@ -46,6 +46,8 @@ import { getTypeManifestVisitor } from './getTypeManifestVisitor';
 import { ImportMap } from './ImportMap';
 import { renderValueNode } from './renderValueNodeVisitor';
 import {
+    type ByteCheck,
+    type ByteExtent,
     CargoDependencies,
     computePdaDerivation,
     constantDiscriminatorName,
@@ -58,12 +60,14 @@ import {
     getFixedInstructionAccountAddress,
     getImportFromFactory,
     type GetImportFromFunction,
+    getSkipCoverage,
     getTraitsFromNodeFactory,
     getUnconditionalDerivesFromNode,
     isIntegerNumberFormat,
     LinkOverrides,
     render,
     renderByteCheck,
+    type SkipCoverage,
     TraitOptions,
 } from './utils';
 
@@ -298,7 +302,7 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                     }
                     const hasParseHelpers = eventHasParseHelpers(node) && isIdentifiable;
 
-                    const matchesParts =
+                    const matchesChecks =
                         isCpiFramed && framingConstantName
                             ? [
                                   renderByteCheck(framingConstantName, programEventFraming!.constant.type, 0),
@@ -311,8 +315,25 @@ export function getRenderMapVisitor(options: GetRenderMapOptions = {}) {
                             ? getCpiFramedSkip(node, getFramedSkipConstants(node, discriminators, programEventFraming!))
                             : getHiddenPrefixSkip(node)
                         : null;
-                    const generateParseHelpers = hasParseHelpers && hiddenPrefixSkipResult !== null;
+                    // The skip is a raw index, so `matches` has to prove every byte it consumes.
+                    const coverage = hiddenPrefixSkipResult
+                        ? getSkipCoverage(matchesChecks, hiddenPrefixSkipResult.extent)
+                        : null;
+                    if (coverage?.kind === 'unprovable') {
+                        logWarn(
+                            `[Rust] Event [${node.name}] has a hidden prefix whose width its discriminators ` +
+                                `do not prove, and the missing bytes cannot be stated as a length check; ` +
+                                `matches and try_parse will not be generated. Declare a discriminator for ` +
+                                `every hidden prefix entry to make the width provable.`,
+                        );
+                    }
+                    const generateParseHelpers =
+                        hasParseHelpers && hiddenPrefixSkipResult !== null && coverage?.kind !== 'unprovable';
                     const hiddenPrefixSkip = hiddenPrefixSkipResult ?? NO_SKIP;
+                    const matchesParts = [
+                        ...matchesChecks.map(check => check.render),
+                        ...(coverage?.kind === 'guard' ? [coverage.render] : []),
+                    ];
 
                     const imports = new ImportMap()
                         .mergeWithManifest(typeManifest)
@@ -772,10 +793,13 @@ function eventHasParseHelpers(event: EventNode): boolean {
     return hasConstantDiscriminator && dataHasHiddenPrefix;
 }
 
-/** A rendered `&data[..]` skip expression; `comment` lists the constants folded into a literal offset. */
-type SkipExpr = { comment: string | null; expr: string };
+/**
+ * A rendered `&data[..]` skip expression; `comment` lists the constants folded into a literal
+ * offset and `extent` is what the expression consumes, for the guard that has to prove it.
+ */
+type SkipExpr = { comment: string | null; expr: string; extent: ByteExtent };
 
-const NO_SKIP: SkipExpr = { comment: null, expr: 'data' };
+const NO_SKIP: SkipExpr = { comment: null, expr: 'data', extent: { literal: 0, terms: [] } };
 
 function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
     if (!isNode(event.data, 'hiddenPrefixTypeNode')) {
@@ -797,7 +821,7 @@ function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
         return null;
     }
     // Literal byte count: keeps arithmetic out of generated code (clippy::arithmetic_side_effects).
-    return { comment: null, expr: `&data[${prefixSize}..]` };
+    return { comment: null, expr: `&data[${prefixSize}..]`, extent: { literal: prefixSize, terms: [] } };
 }
 
 /** Resolved program-level framing: the hoisted prefix constant + its source EventFraming. */
@@ -870,6 +894,7 @@ function getCpiFramedSkip(
     const prefix = event.data.prefix ?? [];
     let knownSize = 0;
     const ranges: string[] = [];
+    const chained: string[] = [];
     const commentParts: string[] = [];
     for (const entry of prefix) {
         const size = constantValueSize(entry);
@@ -881,6 +906,7 @@ function getCpiFramedSkip(
             commentParts.push(named ? `${named.name} (${size})` : `hidden prefix entry (${size})`);
         } else if (named) {
             ranges.push(`[${named.name}.len()..]`);
+            chained.push(named.name);
             commentParts.push(named.name);
         } else {
             logWarn(
@@ -894,7 +920,14 @@ function getCpiFramedSkip(
         ranges.unshift(`[${knownSize}..]`);
     }
     const comment = prefix.length > 1 ? commentParts.join(' + ') : null;
-    return { comment, expr: `&data${ranges.join('')}` };
+    return { comment, expr: `&data${ranges.join('')}`, extent: { literal: knownSize, terms: chained } };
+}
+
+/** An identify arm's condition, with the clause that makes it prove its own try_parse skip. */
+function renderArmCondition(conditions: ByteCheck[], coverage: SkipCoverage): string {
+    return [...conditions.map(check => check.render), ...(coverage.kind === 'guard' ? [coverage.render] : [])].join(
+        ' && ',
+    );
 }
 
 /** Renders a fixed-size bytes ConstantValueNode as a Rust `[u8; N] = [b0, b1, ...]` array literal. */
@@ -935,6 +968,11 @@ function buildProgramEventsRender(
     const framingConstantName = programEventFraming
         ? snakeCase(programEventFraming.framing.sharedConstantName).toUpperCase()
         : null;
+    // `identify` hoists this compare out of the framed arms, so it still proves their bytes.
+    const framingCheck =
+        programEventFraming && framingConstantName
+            ? renderByteCheck(framingConstantName, programEventFraming.constant.type, 0)
+            : null;
 
     const eventsWithDiscriminators = events
         .filter(event => (event.discriminators ?? []).length > 0)
@@ -968,13 +1006,21 @@ function buildProgramEventsRender(
                 if (hiddenPrefixSkip === null) {
                     return [];
                 }
+                const coverage = getSkipCoverage(
+                    framingCheck ? [framingCheck, ...perEventConditions] : perEventConditions,
+                    hiddenPrefixSkip.extent,
+                );
+                // The per-event page already warned about an unprovable width.
+                if (coverage.kind === 'unprovable') {
+                    return [];
+                }
                 // Inside identify's hoisted framing block, the arm checks only the event's
                 // own discriminators: the shared framing is compared once for all arms.
                 imports.mergeWith(condImports);
                 return [
                     {
                         ...event,
-                        condition: perEventConditions.join(' && '),
+                        condition: renderArmCondition(perEventConditions, coverage),
                         framed: true,
                         hiddenPrefixSkip,
                     },
@@ -987,12 +1033,16 @@ function buildProgramEventsRender(
             if (hiddenPrefixSkipResult === null || perEventConditions.length === 0) {
                 return [];
             }
+            const coverage = getSkipCoverage(perEventConditions, hiddenPrefixSkipResult.extent);
+            if (coverage.kind === 'unprovable') {
+                return [];
+            }
 
             imports.mergeWith(condImports);
             return [
                 {
                     ...event,
-                    condition: perEventConditions.join(' && '),
+                    condition: renderArmCondition(perEventConditions, coverage),
                     framed: false,
                     hiddenPrefixSkip: hiddenPrefixSkipResult,
                 },
@@ -1025,10 +1075,6 @@ function buildProgramEventsRender(
         anyCpiFramed && programEventFraming !== undefined
             ? renderConstantBytesArray(programEventFraming.constant)
             : null;
-    const framingCheck =
-        anyCpiFramed && framingConstantName && programEventFraming
-            ? renderByteCheck(framingConstantName, programEventFraming.constant.type, 0)
-            : null;
 
     return {
         content: render('programEventsPage.njk', {
@@ -1037,7 +1083,7 @@ function buildProgramEventsRender(
             eventFramingName: anyCpiFramed ? framingConstantName : null,
             eventsWithDiscriminators,
             framedEvents,
-            framingCheck,
+            framingCheck: anyCpiFramed && framingCheck ? framingCheck.render : null,
             imports: imports.toString(dependencyMap),
             program: programNode,
             unframedEvents,

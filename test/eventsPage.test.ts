@@ -1855,8 +1855,114 @@ test('it skips the full hidden prefix even when discriminators do not cover it',
     codeContains(eventCode, [
         '// EVENT_CPI_PREFIX (8) + PADDED_EVENT_DISCRIMINATOR (8) + hidden prefix entry (4)',
         'let mut data = &data[20..];',
+        // The discriminators prove 16 bytes; the skip consumes 20, so matches proves the rest.
+        'data.get(8..16) == Some(&PADDED_EVENT_DISCRIMINATOR[..]) && data.len() >= 20',
     ]);
-    codeContains(programEventsCode, ['let mut data = &data[20..];']);
+    codeContains(programEventsCode, [
+        'let mut data = &data[20..];',
+        'if data.get(8..16) == Some(&PADDED_EVENT_DISCRIMINATOR[..]) && data.len() >= 20 {',
+    ]);
+});
+
+test('it proves the full hidden prefix in matches for an unframed event', () => {
+    // Prefix [A(8), B(8)] with a single discriminator on A: matches proves 8 bytes while
+    // try_parse indexes at 16, so a 9-byte buffer starting with A used to panic.
+    const headConst = constantValueNode(
+        fixedSizeTypeNode(bytesTypeNode(), 8),
+        bytesValueNode('base16', 'aabbccdd11223344'),
+    );
+    const tailConst = constantValueNode(
+        fixedSizeTypeNode(bytesTypeNode(), 8),
+        bytesValueNode('base16', '1122334455667788'),
+    );
+    const node = programNode({
+        events: [
+            eventNode({
+                data: hiddenPrefixTypeNode(
+                    structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                    [headConst, tailConst],
+                ),
+                discriminators: [constantDiscriminatorNode(headConst, 0)],
+                name: 'skewedEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+    const eventCode = getFromRenderMap(renderMap, 'events/skewed_event.rs').content;
+    const programEventsCode = getFromRenderMap(renderMap, 'events/my_program_events.rs').content;
+
+    codeContains(eventCode, [
+        'data.get(..SKEWED_EVENT_DISCRIMINATOR.len()) == Some(&SKEWED_EVENT_DISCRIMINATOR[..]) && data.len() >= 16',
+        'let mut data = &data[16..];',
+    ]);
+    codeContains(programEventsCode, [
+        'if data.get(..SKEWED_EVENT_DISCRIMINATOR.len()) == Some(&SKEWED_EVENT_DISCRIMINATOR[..]) && data.len() >= 16 {',
+        'let mut data = &data[16..];',
+    ]);
+});
+
+test('it drops the parse helpers when the skip width cannot be stated as a length check', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        // The link-typed discriminator makes the skip a `[.len()..]` chain, and the trailing
+        // unreferenced constant pushes the literal part past what any single check proves.
+        const linkEventDisc = constantValueNode(
+            definedTypeLinkNode('discAlias'),
+            arrayValueNode([numberValueNode(1), numberValueNode(2), numberValueNode(3)]),
+        );
+        const extraConst = constantValueNode(
+            fixedSizeTypeNode(bytesTypeNode(), 4),
+            bytesValueNode('base16', 'deadbeef'),
+        );
+        const node = programNode({
+            definedTypes: [definedTypeNode({ name: 'discAlias', type: fixedSizeTypeNode(bytesTypeNode(), 3) })],
+            events: [
+                eventNode({
+                    data: hiddenPrefixTypeNode(
+                        structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                        [framingPrefix, linkEventDisc, extraConst],
+                    ),
+                    discriminators: [
+                        constantDiscriminatorNode(framingPrefix, 0),
+                        constantDiscriminatorNode(linkEventDisc, 8),
+                    ],
+                    framing: cpiFraming,
+                    name: 'unprovableEvent',
+                }),
+            ],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+
+        expect(warnSpy.mock.calls[0][0]).toMatch(
+            /Event \[unprovableEvent\] has a hidden prefix whose width its discriminators do not prove/,
+        );
+        codeDoesNotContains(getFromRenderMap(renderMap, 'events/unprovable_event.rs').content, [
+            'pub fn matches',
+            'pub fn try_parse',
+        ]);
+        expect(renderMap.has('events/my_program_events.rs')).toBe(false);
+    } finally {
+        warnSpy.mockRestore();
+    }
+});
+
+test('it adds no length check when the discriminators already prove the skip', () => {
+    const node = programNode({
+        events: [framedEvent('tradeEvent', tradeDisc)],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+
+    codeDoesNotContains(getFromRenderMap(renderMap, 'events/trade_event.rs').content, ['data.len() >=']);
+    codeDoesNotContains(getFromRenderMap(renderMap, 'events/my_program_events.rs').content, ['data.len() >=']);
 });
 
 test('it documents the transpose hint and the program-level filter_map example', () => {
