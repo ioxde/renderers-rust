@@ -801,12 +801,36 @@ type SkipExpr = { comment: string | null; expr: string; extent: ByteExtent };
 
 const NO_SKIP: SkipExpr = { comment: null, expr: 'data', extent: { literal: 0, terms: [] } };
 
+/**
+ * Every hidden-prefix entry in front of the body, outermost first. Nested prefixes stack: the decoder
+ * is built from the fully resolved inner type, so all of them precede its first byte. Null when a
+ * wrapper the decoder also resolves through may add leading bytes of its own.
+ */
+function getHiddenPrefixEntries(event: EventNode): ConstantValueNode[] | null {
+    const entries: ConstantValueNode[] = [];
+    for (let node = event.data; ; node = node.type) {
+        if (!isNode(node, 'hiddenPrefixTypeNode')) {
+            if (resolveNestedTypeNode(node) === node) {
+                return entries;
+            }
+            logWarn(
+                `[Rust] Event [${event.name}] wraps its data in a [${node.kind}], which the decoder ` +
+                    `resolves through and whose leading bytes cannot be counted; matches and try_parse ` +
+                    `will not be generated.`,
+            );
+            return null;
+        }
+        entries.push(...(node.prefix ?? []));
+    }
+}
+
 function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
-    if (!isNode(event.data, 'hiddenPrefixTypeNode')) {
-        return NO_SKIP;
+    const entries = getHiddenPrefixEntries(event);
+    if (entries === null) {
+        return null;
     }
     let hasNonFixedSize = false;
-    const prefixSize = (event.data.prefix ?? []).reduce((sum, p) => {
+    const prefixSize = entries.reduce((sum, p) => {
         if (!isNode(p.type, 'fixedSizeTypeNode')) {
             logWarn(
                 `[Rust] Event [${event.name}] has a non-fixed-size hidden prefix entry; ` +
@@ -819,6 +843,9 @@ function getHiddenPrefixSkip(event: EventNode): SkipExpr | null {
     }, 0);
     if (hasNonFixedSize) {
         return null;
+    }
+    if (prefixSize === 0) {
+        return NO_SKIP;
     }
     // Literal byte count: keeps arithmetic out of generated code (clippy::arithmetic_side_effects).
     return { comment: null, expr: `&data[${prefixSize}..]`, extent: { literal: prefixSize, terms: [] } };
@@ -888,10 +915,13 @@ function getCpiFramedSkip(
     event: EventNode,
     namedConstants: { constant: ConstantValueNode; name: string }[],
 ): SkipExpr | null {
-    if (!isNode(event.data, 'hiddenPrefixTypeNode')) {
+    const prefix = getHiddenPrefixEntries(event);
+    if (prefix === null) {
+        return null;
+    }
+    if (prefix.length === 0) {
         return NO_SKIP;
     }
-    const prefix = event.data.prefix ?? [];
     let knownSize = 0;
     const ranges: string[] = [];
     const chained: string[] = [];
@@ -1027,9 +1057,7 @@ function buildProgramEventsRender(
                 ];
             }
 
-            const hiddenPrefixSkipResult = isNode(event.data, 'hiddenPrefixTypeNode')
-                ? getHiddenPrefixSkip(event)
-                : NO_SKIP;
+            const hiddenPrefixSkipResult = getHiddenPrefixSkip(event);
             if (hiddenPrefixSkipResult === null || perEventConditions.length === 0) {
                 return [];
             }

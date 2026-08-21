@@ -18,6 +18,7 @@ import {
     programNode,
     rootNode,
     sizeDiscriminatorNode,
+    sizePrefixTypeNode,
     structFieldTypeNode,
     structTypeNode,
 } from '@codama/nodes';
@@ -1902,6 +1903,113 @@ test('it proves the full hidden prefix in matches for an unframed event', () => 
         'if data.get(..SKEWED_EVENT_DISCRIMINATOR.len()) == Some(&SKEWED_EVENT_DISCRIMINATOR[..]) && data.len() >= 16 {',
         'let mut data = &data[16..];',
     ]);
+});
+
+test('it counts every level of a nested hidden prefix', () => {
+    // Both prefix levels precede the body: the skip is 8 + 4, not the outer level's 8.
+    const outerConst = constantValueNode(
+        fixedSizeTypeNode(bytesTypeNode(), 8),
+        bytesValueNode('base16', 'aabbccdd11223344'),
+    );
+    const innerConst = constantValueNode(fixedSizeTypeNode(bytesTypeNode(), 4), bytesValueNode('base16', 'deadbeef'));
+    const node = programNode({
+        events: [
+            eventNode({
+                data: hiddenPrefixTypeNode(
+                    hiddenPrefixTypeNode(
+                        structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                        [innerConst],
+                    ),
+                    [outerConst],
+                ),
+                discriminators: [constantDiscriminatorNode(outerConst, 0)],
+                name: 'nestedEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+
+    codeContains(getFromRenderMap(renderMap, 'events/nested_event.rs').content, [
+        'data.get(..NESTED_EVENT_DISCRIMINATOR.len()) == Some(&NESTED_EVENT_DISCRIMINATOR[..]) && data.len() >= 12',
+        'let mut data = &data[12..];',
+    ]);
+    codeContains(getFromRenderMap(renderMap, 'events/my_program_events.rs').content, [
+        'if data.get(..NESTED_EVENT_DISCRIMINATOR.len()) == Some(&NESTED_EVENT_DISCRIMINATOR[..]) && data.len() >= 12 {',
+        'let mut data = &data[12..];',
+    ]);
+});
+
+test('it counts a nested hidden prefix under the CPI framing', () => {
+    const innerConst = constantValueNode(fixedSizeTypeNode(bytesTypeNode(), 4), bytesValueNode('base16', 'deadbeef'));
+    const node = programNode({
+        events: [
+            eventNode({
+                data: hiddenPrefixTypeNode(
+                    hiddenPrefixTypeNode(
+                        structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                        [innerConst],
+                    ),
+                    [framingPrefix, tradeDisc],
+                ),
+                discriminators: [constantDiscriminatorNode(framingPrefix, 0), constantDiscriminatorNode(tradeDisc, 8)],
+                framing: cpiFraming,
+                name: 'tradeEvent',
+            }),
+        ],
+        name: 'myProgram',
+        publicKey: '11111111111111111111111111111111',
+    });
+
+    const renderMap = visit(node, getRenderMapVisitor());
+
+    codeContains(getFromRenderMap(renderMap, 'events/trade_event.rs').content, [
+        '// EVENT_CPI_PREFIX (8) + TRADE_EVENT_DISCRIMINATOR (8) + hidden prefix entry (4)',
+        'let mut data = &data[20..];',
+        // The discriminators prove 16 bytes; the inner level pushes the skip to 20.
+        'data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..]) && data.len() >= 20',
+    ]);
+    codeContains(getFromRenderMap(renderMap, 'events/my_program_events.rs').content, [
+        'if data.get(8..16) == Some(&TRADE_EVENT_DISCRIMINATOR[..]) && data.len() >= 20 {',
+        'let mut data = &data[20..];',
+    ]);
+});
+
+test('it drops the parse helpers when another wrapper hides leading bytes', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+        // The decoder resolves through the size prefix, so no hidden-prefix offset reaches the body.
+        const node = programNode({
+            events: [
+                eventNode({
+                    data: hiddenPrefixTypeNode(
+                        sizePrefixTypeNode(
+                            structTypeNode([structFieldTypeNode({ name: 'amount', type: numberTypeNode('u64') })]),
+                            numberTypeNode('u32'),
+                        ),
+                        [framingPrefix],
+                    ),
+                    discriminators: [constantDiscriminatorNode(framingPrefix, 0)],
+                    name: 'sizedEvent',
+                }),
+            ],
+            name: 'myProgram',
+            publicKey: '11111111111111111111111111111111',
+        });
+
+        const renderMap = visit(node, getRenderMapVisitor());
+
+        expect(warnSpy.mock.calls[0][0]).toMatch(/Event \[sizedEvent\] wraps its data in a \[sizePrefixTypeNode\]/);
+        codeDoesNotContains(getFromRenderMap(renderMap, 'events/sized_event.rs').content, [
+            'pub fn matches',
+            'pub fn try_parse',
+        ]);
+        expect(renderMap.has('events/my_program_events.rs')).toBe(false);
+    } finally {
+        warnSpy.mockRestore();
+    }
 });
 
 test('it drops the parse helpers when the skip width cannot be stated as a length check', () => {
